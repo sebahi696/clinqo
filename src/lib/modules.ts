@@ -8,7 +8,7 @@ export interface ModuleMeta {
 }
 
 export const MODULES: ModuleMeta[] = [
-  { key: 'marketing', label: 'Marketing & Meta Ads', description: 'Clinqo marketer runs the ads; lead-form leads land in the CRM; spend, cost per patient, ROAS', group: 'Growth' },
+  { key: 'marketing', label: 'Marketing & Meta Ads', description: 'Clinqo runs the Meta ads; lead-form leads arrive in the CRM. Results stay with Clinqo.', group: 'Growth' },
   { key: 'automations', label: 'Follow-ups', description: 'Reminder, recall and review lists with one-click WhatsApp/SMS (no messaging API)', group: 'Growth' },
   { key: 'crm', label: 'CRM', description: 'Leads pipeline and patient/client 360 profiles', group: 'Front desk' },
   { key: 'appointments', label: 'Appointments', description: 'Calendar by provider, booking, deposits, statuses', group: 'Front desk' },

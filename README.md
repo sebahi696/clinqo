@@ -32,13 +32,18 @@ Demo tenants (Lebanon):
 - Tenants: create (4-step wizard), edit profile, status, fee, user and branch limits
 - Feature switches per tenant with presets: Growth suite, Operating system, Marketing only, Custom
 - Meta Business Manager connection, ad account list, assign one ad account (and Facebook page) per tenant, sync of spend and lead-form leads
+- **Growth (ads) workspace** for the Clinqo marketer: all growth clients at a glance (budget vs plan, leads, cost per lead vs target, uncalled leads, ROAS, what needs attention); per clinic:
+  - Overview: spend, cost per lead / per paying patient, ROAS from real clinic revenue, funnel, "what to do next" suggestions
+  - Campaigns: change daily budget, pause/resume (auto-logged), open any campaign in Ads Manager, find new campaigns
+  - Lead forms: pick which answer becomes the lead's interest and which answers the clinic sees
+  - Plan & pacing, optimization log, setup checklist (connect ad account, page, forms, approval, first lead)
+  - What the clinic sees: label for ad leads, show/hide form answers and campaign names, with a live preview
 - Marketing plan per tenant: goal, budget, target CPL, offers, audiences, phase (plan → configuration → ad spend → optimizing), client approval
 - Tenant users and roles; activity log; open any tenant as admin
 
 **Tenant (clinic / spa)** — each module can be switched off by the super admin
-- Dashboard: today's schedule, revenue, new leads, unread messages, ad performance, stock alerts
-- Marketing: growth plan, ad funnel (spend → leads → booked → attended → paying → revenue), campaigns with CPL, cost per patient, ROAS, monthly report
-- Leads: Meta lead-form leads arrive with campaign, form and answers; call or WhatsApp in one tap (click-to-chat, no API); drag-and-drop pipeline; time to first contact; add by hand; import a Meta Leads Center CSV or any sheet; export
+- Dashboard: today's schedule, revenue, new leads, leads to call now, stock alerts (no ad spend or ad results: those stay with Clinqo)
+- Leads: ad leads arrive with the form answers the marketer chose to share; call or WhatsApp in one tap (click-to-chat, no API); drag-and-drop pipeline; time to first contact; add by hand; import a Meta Leads Center CSV or any sheet; export
 - Patients / clients: 360 profile with timeline, appointments, dental chart (FDI), clinical notes, consent forms, packages, invoices; CSV import from Excel or old systems
 - Calendar: day view by provider, week strip, click a slot to book, statuses, deposits, WhatsApp reminder, checkout
 - POS: services, products, packages, gift cards; USD + LBP; Cash USD, Cash LBP, card, Whish, OMT, bank, gift card; split payments; package session redemption; VAT toggle; printable receipt

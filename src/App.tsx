@@ -8,6 +8,8 @@ import type { ModuleKey } from './lib/types';
 import Login from './pages/Login';
 import AdminActivity from './pages/admin/Activity';
 import AdminMeta from './pages/admin/Meta';
+import Growth from './pages/admin/Growth';
+import GrowthTenant from './pages/admin/GrowthTenant';
 import AdminOverview from './pages/admin/Overview';
 import TenantDetail from './pages/admin/TenantDetail';
 import TenantNew from './pages/admin/TenantNew';
@@ -19,7 +21,6 @@ import Finance from './pages/tenant/Finance';
 import Inventory from './pages/tenant/Inventory';
 import Invoices from './pages/tenant/Invoices';
 import Leads from './pages/tenant/Leads';
-import Marketing from './pages/tenant/Marketing';
 import Packages from './pages/tenant/Packages';
 import PatientProfile from './pages/tenant/PatientProfile';
 import Patients from './pages/tenant/Patients';
@@ -66,6 +67,8 @@ export default function App() {
         <Route path="tenants" element={<Tenants />} />
         <Route path="tenants/new" element={<TenantNew />} />
         <Route path="tenants/:id" element={<TenantDetail />} />
+        <Route path="growth" element={<Growth />} />
+        <Route path="growth/:id" element={<GrowthTenant />} />
         <Route path="meta" element={<AdminMeta />} />
         <Route path="activity" element={<AdminActivity />} />
       </Route>
@@ -80,7 +83,6 @@ export default function App() {
         <Route path="packages" element={<Gate mod="packages"><Packages /></Gate>} />
         <Route path="inventory" element={<Gate mod="inventory"><Inventory /></Gate>} />
         <Route path="finance" element={<Gate mod="finance"><Finance /></Gate>} />
-        <Route path="marketing" element={<Gate mod="marketing"><Marketing /></Gate>} />
         <Route path="automations" element={<Gate mod="automations"><Automations /></Gate>} />
         <Route path="reports" element={<Gate mod="reports"><Reports /></Gate>} />
         <Route path="staff" element={<Gate mod="staff"><StaffPage /></Gate>} />

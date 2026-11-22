@@ -101,7 +101,7 @@ export default function AdminOverview() {
               if (!t) return null;
               const idx = PHASES.indexOf(p.phase);
               return (
-                <Link to={`/admin/tenants/${t.id}?tab=plan`} key={p.tenantId} className="block">
+                <Link to={`/admin/growth/${t.id}?tab=plan`} key={p.tenantId} className="block">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-ink-800">{t.name}</span>
                     <span className="text-xs text-ink-400">{p.approvedByClient ? 'Plan approved' : 'Awaiting client approval'}</span>

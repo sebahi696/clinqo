@@ -12,25 +12,14 @@ export default function AdminMeta() {
   const [addOpen, setAddOpen] = useState(false);
   const [acct, setAcct] = useState({ id: '', name: '', currency: 'USD', tenantId: '' });
   const [err, setErr] = useState('');
-  const updateTenant = useDB((s) => s.updateTenant);
-  const log = useDB((s) => s.log);
   const closeAdd = () => {
     setAddOpen(false);
     setErr('');
     setAcct({ id: '', name: '', currency: 'USD', tenantId: '' });
   };
   const addAccount = () => {
-    const digits = acct.id.trim().replace(/^act_/i, '');
-    if (!/^\d{6,20}$/.test(digits)) return setErr('Enter the ad account ID: the number shown in Ads Manager (with or without "act_").');
-    const id = 'act_' + digits;
-    if (meta.adAccounts.some((a) => a.id === id)) return setErr('This ad account is already in the list.');
-    const name = acct.name.trim() || `Ad account ${digits.slice(-4)}`;
-    useDB.setState((s) => ({ meta: { ...s.meta, adAccounts: [...s.meta.adAccounts, { id, name, currency: acct.currency }] } }));
-    log(`Added ad account ${name} (${id})`);
-    if (acct.tenantId) {
-      updateTenant(acct.tenantId, { metaAdAccountId: id });
-      log(`Assigned ad account ${id} to ${tenants.find((t) => t.id === acct.tenantId)?.name}`, acct.tenantId);
-    }
+    const e = useDB.getState().addAdAccount({ ...acct, tenantId: acct.tenantId || undefined });
+    if (e) return setErr(e);
     closeAdd();
   };
   const owner = (id: string) => tenants.find((t) => t.metaAdAccountId === id);
@@ -113,7 +102,7 @@ export default function AdminMeta() {
                   </td>
                   <td className="td">
                     {t ? (
-                      <Link to={`/admin/tenants/${t.id}?tab=channels`} className="text-brand-700 hover:underline">
+                      <Link to={`/admin/growth/${t.id}?tab=setup`} className="text-brand-700 hover:underline">
                         {t.name}
                       </Link>
                     ) : (

@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { Bar as RBar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Avatar, Bar, Card, PageHeader, Stat } from '../../components/ui';
 import type { LeadSource, PaymentMethod } from '../../lib/types';
-import { METHOD_LABEL, pct, SOURCE_LABEL, usd } from '../../lib/utils';
+import { useSourceLabel } from '../../lib/hooks';
+import { METHOD_LABEL, pct, usd } from '../../lib/utils';
 import { useT } from '../../store/db';
 
 export default function Reports() {
   const [range, setRange] = useState(30);
+  const label = useSourceLabel();
   const since = Date.now() - range * 864e5;
   const invoices = useT('invoices').filter((i) => i.status !== 'refunded' && new Date(i.createdAt).getTime() > since);
   const appts = useT('appointments').filter((a) => new Date(a.start).getTime() > since && new Date(a.start) < new Date());
@@ -135,7 +137,7 @@ export default function Reports() {
             <tbody className="divide-y divide-ink-50">
               {srcConv.map(([s, x]) => (
                 <tr key={s}>
-                  <td className="py-2">{SOURCE_LABEL[s]}</td>
+                  <td className="py-2">{label(s)}</td>
                   <td className="td text-end">{x.n}</td>
                   <td className="td text-end">{x.won}</td>
                   <td className="td text-end font-medium">{pct(x.won / x.n)}</td>

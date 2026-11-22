@@ -13,9 +13,11 @@ import type {
   GiftCard,
   Invoice,
   Lead,
+  LeadForm,
   LeadSource,
   LeadStage,
   MarketingPlan,
+  OptimizationLog,
   MetaConnection,
   PackageDef,
   Patient,
@@ -58,12 +60,14 @@ export interface DB {
   consents: ConsentRecord[];
   campaigns: Campaign[];
   plans: MarketingPlan[];
+  leadForms: LeadForm[];
+  optLogs: OptimizationLog[];
   automations: Automation[];
   meta: MetaConnection;
   activity: ActivityLog[];
 }
 
-export const DB_VERSION = 5;
+export const DB_VERSION = 6;
 
 const FEMALE = ['Maya', 'Rita', 'Nour', 'Lara', 'Yasmine', 'Cynthia', 'Joelle', 'Rania', 'Hiba', 'Lea', 'Carla', 'Tala', 'Sara', 'Dana', 'Mira', 'Zeina', 'Christelle', 'Layal'];
 const MALE = ['Karim', 'Ziad', 'Elie', 'Georges', 'Hadi', 'Ali', 'Omar', 'Rami', 'Fadi', 'Charbel', 'Marc', 'Jad', 'Hassan', 'Tony', 'Wael', 'Nabil'];
@@ -164,6 +168,9 @@ const STAFF: Record<Vertical, [string, string][]> = {
   medical: [['Dr. Karim Karam', 'Dermatologist']],
 };
 
+export const DEFAULT_LEAD_DISPLAY = { showCampaign: false, showAnswers: true, sourceLabel: 'Online ad' };
+export const FORM_QUESTIONS = ['Full name', 'Phone number', 'What are you interested in?', 'Best time to call?', 'Area'];
+
 const COLORS = ['#1f9880', '#e46a48', '#6366f1', '#d97706', '#0ea5e9', '#a855f7'];
 
 const CAMPAIGNS: Record<Vertical, [string, Campaign['objective'], number][]> = {
@@ -230,6 +237,8 @@ export function buildSeed(): DB {
     consents: [],
     campaigns: [],
     plans: [],
+    leadForms: [],
+    optLogs: [],
     automations: [],
     meta: {
       connected: true,
@@ -247,7 +256,7 @@ export function buildSeed(): DB {
   };
 
   const tenantSeeds: {
-    t: Omit<Tenant, 'modules' | 'monthlyFeeUSD' | 'createdAt' | 'limits' | 'currency' | 'secondaryCurrency' | 'exchangeRate' | 'vatRate'>;
+    t: Omit<Tenant, 'modules' | 'monthlyFeeUSD' | 'createdAt' | 'limits' | 'currency' | 'secondaryCurrency' | 'exchangeRate' | 'vatRate' | 'leadDisplay'>;
     patients: number;
     days: number;
     created: number;
@@ -352,6 +361,7 @@ export function buildSeed(): DB {
       monthlyFeeUSD: preset.fee,
       createdAt: iso(daysAgo(ts.created)),
       limits: { users: 10, branches: 1 },
+      leadDisplay: { ...DEFAULT_LEAD_DISPLAY },
     };
     db.tenants.push(tenant);
     const tid = tenant.id;
@@ -420,6 +430,28 @@ export function buildSeed(): DB {
         })
       : [];
     db.campaigns.push(...campaigns);
+    const leadForms: LeadForm[] = campaigns.map((c) => ({
+      id: id('lf'),
+      tenantId: tid,
+      metaFormId: String(int(1e14, 9e14)),
+      name: `${c.name} – form`,
+      campaignId: c.id,
+      questions: [...FORM_QUESTIONS],
+      interestQuestion: 'What are you interested in?',
+      visibleQuestions: ['What are you interested in?', 'Best time to call?', 'Area'],
+      status: 'ACTIVE',
+    }));
+    db.leadForms.push(...leadForms);
+    if (campaigns.length) {
+      const logs: [number, OptimizationLog['kind'], string][] = [
+        [30, 'launch', `Launched ${campaigns[0].name} with lead form, broad audience 25–55 within 30km`],
+        [18, 'creative', 'Swapped static image for before/after reel (patient consent on file); CTR up from 0.9% to 1.6%'],
+        [9, 'audience', 'Excluded existing patients (customer list upload) to stop paying for regulars'],
+        [4, 'budget', `Raised ${campaigns[0].name} from $20 to $${campaigns[0].dailyBudget}/day after cost per booked consult held under target`],
+        [2, 'note', 'Clinic leaves leads uncalled after 6pm. Asked owner to assign evening follow-up.'],
+      ];
+      logs.forEach(([d, kind, text]) => db.optLogs.push({ id: id('ol'), tenantId: tid, at: iso(daysAgo(d, 11)), author: 'Rami (Clinqo marketer)', kind, campaignId: kind === 'note' ? undefined : campaigns[0].id, text }));
+    }
     if (tenant.modules.marketing) {
       db.plans.push({
         tenantId: tid,
@@ -574,22 +606,25 @@ export function buildSeed(): DB {
       const interest = pick(INTEREST[v]);
       const svc = services.find((s) => s.name.toLowerCase().includes(interest.toLowerCase().split(' ')[0])) ?? pick(services);
       const matched = stage === 'won' || stage === 'attended' ? pick(patients.filter((p) => p.source === 'meta_ads' || p.source === 'instagram' || p.source === 'whatsapp')) : undefined;
+      const lcamp = src === 'meta_ads' && campaigns.length ? campaigns.find((c) => c.id === matched?.campaignId) ?? pick(campaigns) : undefined;
+      const lform = lcamp ? db.leadForms.find((f) => f.campaignId === lcamp.id) : undefined;
       db.leads.push({
         id: id('ld'),
         tenantId: tid,
         name: matched ? `${matched.firstName} ${matched.lastName}` : `${female ? pick(FEMALE) : pick(MALE)} ${pick(LAST)}`,
         phone: matched?.phone ?? `+961 ${pick(PREFIX)} ${int(100, 999)} ${int(100, 999)}`,
         source: src,
-        campaignId: src === 'meta_ads' && campaigns.length ? (matched?.campaignId ?? pick(campaigns).id) : undefined,
+        campaignId: lcamp?.id,
         interest,
         stage,
         value: svc.price,
         createdAt: iso(pastAgo(age, int(8, 22), int(0, 59))),
         firstResponseMins: stage === 'new' ? undefined : int(1, 95),
         patientId: matched?.id,
-        ...(src === 'meta_ads'
+        ...(lform
           ? {
-              formName: `${interest} – lead form`,
+              formName: lform.name,
+              formId: lform.id,
               answers: {
                 'What are you interested in?': interest,
                 'Best time to call?': pick(['Morning', 'Afternoon', 'After 5pm']),
@@ -623,10 +658,6 @@ export function buildSeed(): DB {
       add('Supplies', v === 'dental' ? 'Dental supplier' : 'Medical supplier', int(600, 1400));
       add('Internet & phone', 'Ogero / Alfa', 85);
       if (tenant.modules.marketing) add('Clinqo subscription', 'Clinqo', tenant.monthlyFeeUSD);
-    }
-    // Ad spend as an expense line (pulled from Meta)
-    if (campaigns.length) {
-      db.expenses.push({ id: id('ex'), tenantId: tid, category: 'Meta ad spend', vendor: 'Meta Platforms', amount: campaigns.reduce((s, c) => s + c.spend, 0), date: iso(daysAgo(1)).slice(0, 10), note: 'Synced from Meta Marketing API' });
     }
 
     // Clinical notes and consents

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import BookingModal from '../../components/BookingModal';
 import { Badge, Field, Modal, PageHeader, Stat } from '../../components/ui';
-import { useCan } from '../../lib/hooks';
+import { useCan, useSourceLabel } from '../../lib/hooks';
 import type { Lead, LeadSource, LeadStage } from '../../lib/types';
 import { ago, cx, download, fmtDateTime, parseCSV, pct, SOURCE_LABEL, STAGE_LABEL, STAGES, telLink, toCSV, uid, usd, waLink } from '../../lib/utils';
 import { useDB, useT, useTenant } from '../../store/db';
@@ -25,7 +25,10 @@ export default function Leads() {
   const can = useCan();
   const leads = useT('leads');
   const campaigns = useT('campaigns');
+  const forms = useT('leadForms');
   const services = useT('services');
+  const label = useSourceLabel();
+  const show = tenant.leadDisplay ?? { showCampaign: false, showAnswers: true, sourceLabel: 'Online ad' };
   const { moveLead, insert, importLeads } = useDB.getState();
   const [src, setSrc] = useState<'all' | LeadSource>('all');
   const [camp, setCamp] = useState('all');
@@ -50,6 +53,7 @@ export default function Leads() {
     const names = ['Nour Saad', 'Karim Fares', 'Lea Haddad', 'Ali Itani', 'Rita Khoury', 'Tala Aoun', 'Jad Bitar'];
     const c = campaigns.length ? campaigns[Math.floor(Math.random() * campaigns.length)] : undefined;
     const svc = services[Math.floor(Math.random() * services.length)];
+    const form = forms.find((x) => x.campaignId === c?.id);
     const id = uid('ld');
     insert('leads', {
       id,
@@ -62,7 +66,8 @@ export default function Leads() {
       stage: 'new',
       value: svc.price,
       createdAt: new Date().toISOString(),
-      formName: c ? `${c.name} – form` : `${svc.name} – lead form`,
+      formName: form?.name ?? `${svc.name} – lead form`,
+      formId: form?.id,
       answers: { 'What are you interested in?': svc.name, 'Best time to call?': 'After 5pm', Area: 'Beirut' },
     });
     setSelId(id);
@@ -99,16 +104,16 @@ export default function Leads() {
     <>
       <PageHeader
         title="Leads"
-        subtitle="Leads from Meta lead form ads arrive here automatically. Call or WhatsApp them, then drag them through the pipeline."
+        subtitle="Leads from your online ads arrive here automatically. Call or WhatsApp them, then drag them through the pipeline."
         actions={
           <>
             <button className="btn-secondary" onClick={simulateMetaLead} title="Test build: simulates a lead form submission from a Meta ad">
-              <Megaphone size={15} /> Simulate Meta lead
+              <Megaphone size={15} /> Simulate ad lead
             </button>
             <button className="btn-secondary" onClick={() => setImp(true)}>
               <Upload size={15} /> Import
             </button>
-            <button className="btn-secondary" onClick={() => download(`leads-${tenant.name}.csv`, toCSV(list.map((l) => ({ name: l.name, phone: l.phone, source: SOURCE_LABEL[l.source], campaign: campaigns.find((c) => c.id === l.campaignId)?.name ?? '', form: l.formName ?? '', interest: l.interest, stage: STAGE_LABEL[l.stage], created: l.createdAt }))))}>
+            <button className="btn-secondary" onClick={() => download(`leads-${tenant.name}.csv`, toCSV(list.map((l) => ({ name: l.name, phone: l.phone, source: label(l.source), ...(show.showCampaign ? { campaign: campaigns.find((c) => c.id === l.campaignId)?.name ?? '', form: l.formName ?? '' } : {}), interest: l.interest, stage: STAGE_LABEL[l.stage], created: l.createdAt }))))}>
               <Download size={15} /> Export
             </button>
             <button className="btn-primary" onClick={() => setOpen(true)}>
@@ -118,7 +123,7 @@ export default function Leads() {
         }
       />
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Leads in view" value={list.length} hint={`${list.filter((l) => l.source === 'meta_ads').length} from Meta lead ads`} />
+        <Stat label="Leads in view" value={list.length} hint={`${list.filter((l) => l.source === 'meta_ads').length} from ${show.sourceLabel.toLowerCase()}s`} />
         <Stat label="Waiting for a call" value={list.filter((l) => l.stage === 'new').length} tone={list.some((l) => l.stage === 'new') ? 'bad' : 'default'} hint="Call within 15 minutes" />
         <Stat label="Avg. time to first contact" value={`${Math.round(avgResp)} min`} icon={<Clock size={16} />} hint={avgResp > 15 ? 'Slower than 15 min target' : 'On target'} tone={avgResp > 15 ? 'bad' : 'good'} />
         <Stat label="Win rate (closed leads)" value={pct(won / Math.max(1, closed))} tone="brand" />
@@ -126,13 +131,13 @@ export default function Leads() {
       <div className="mb-4 flex flex-wrap gap-2">
         <select className="input w-auto py-1.5" value={src} onChange={(e) => setSrc(e.target.value as LeadSource | 'all')}>
           <option value="all">All sources</option>
-          {Object.entries(SOURCE_LABEL).map(([k, v]) => (
+          {(Object.keys(SOURCE_LABEL) as LeadSource[]).map((k) => (
             <option key={k} value={k}>
-              {v}
+              {label(k)}
             </option>
           ))}
         </select>
-        {campaigns.length > 0 && (
+        {show.showCampaign && campaigns.length > 0 && (
           <select className="input w-auto py-1.5" value={camp} onChange={(e) => setCamp(e.target.value)}>
             <option value="all">All campaigns</option>
             {campaigns.map((c) => (
@@ -177,7 +182,7 @@ export default function Leads() {
                     </div>
                     <div className="mt-0.5 text-xs text-ink-500">{l.interest}</div>
                     <div className="mt-2 flex items-center justify-between">
-                      <span className={cx('rounded px-1.5 py-0.5 text-[10px] font-medium', l.source === 'meta_ads' ? 'bg-[#0866ff]/10 text-[#0866ff]' : 'bg-ink-50 text-ink-500')}>{SOURCE_LABEL[l.source]}</span>
+                      <span className={cx('rounded px-1.5 py-0.5 text-[10px] font-medium', l.source === 'meta_ads' ? 'bg-[#0866ff]/10 text-[#0866ff]' : 'bg-ink-50 text-ink-500')}>{label(l.source)}</span>
                       <span className="text-xs font-medium text-ink-600">{usd(l.value)}</span>
                     </div>
                   </div>
@@ -280,15 +285,21 @@ export default function Leads() {
 function LeadDetail({ lead, onBook, canBook }: { lead: Lead; onBook: (patientId: string) => void; canBook: boolean }) {
   const tenant = useTenant()!;
   const campaigns = useT('campaigns');
+  const forms = useT('leadForms');
+  const label = useSourceLabel();
+  const show = tenant.leadDisplay ?? { showCampaign: false, showAnswers: true, sourceLabel: 'Online ad' };
   const { moveLead, patch, convertLead } = useDB.getState();
-  const camp = campaigns.find((c) => c.id === lead.campaignId);
+  const camp = show.showCampaign ? campaigns.find((c) => c.id === lead.campaignId) : undefined;
+  const form = forms.find((f) => f.id === lead.formId);
+  const answers = show.showAnswers && lead.answers ? Object.entries(lead.answers).filter(([q]) => !form || form.visibleQuestions.includes(q)) : [];
+  const formName = show.showCampaign ? lead.formName : undefined;
   const first = lead.name.split(' ')[0];
   const contacted = () => lead.stage === 'new' && moveLead(lead.id, 'contacted');
   return (
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-ink-500">
         <span dir="ltr">{lead.phone}</span>·<span>{fmtDateTime(lead.createdAt)}</span>
-        <Badge className={lead.source === 'meta_ads' ? 'bg-[#0866ff]/10 text-[#0866ff] ring-[#0866ff]/20' : undefined}>{SOURCE_LABEL[lead.source]}</Badge>
+        <Badge className={lead.source === 'meta_ads' ? 'bg-[#0866ff]/10 text-[#0866ff] ring-[#0866ff]/20' : undefined}>{label(lead.source)}</Badge>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <a className="btn-primary" href={telLink(lead.phone)} onClick={contacted}>
@@ -298,14 +309,14 @@ function LeadDetail({ lead, onBook, canBook }: { lead: Lead; onBook: (patientId:
           <MessageCircle size={15} /> WhatsApp
         </a>
       </div>
-      {(camp || lead.formName) && (
+      {(camp || formName || answers.length > 0) && (
         <div className="rounded-lg bg-[#0866ff]/5 p-3">
-          <div className="text-[10px] font-semibold uppercase text-[#0866ff]">Meta lead ad</div>
+          <div className="text-[10px] font-semibold uppercase text-[#0866ff]">{show.sourceLabel}</div>
           {camp && <div className="text-ink-700">Campaign: {camp.name}</div>}
-          {lead.formName && <div className="text-ink-700">Form: {lead.formName}</div>}
-          {lead.answers && (
-            <dl className="mt-2 space-y-1 border-t border-[#0866ff]/10 pt-2">
-              {Object.entries(lead.answers).map(([q, a]) => (
+          {formName && <div className="text-ink-700">Form: {formName}</div>}
+          {answers.length > 0 && (
+            <dl className={cx('space-y-1', (camp || formName) && 'mt-2 border-t border-[#0866ff]/10 pt-2')}>
+              {answers.map(([q, a]) => (
                 <div key={q} className="flex justify-between gap-3 text-xs">
                   <dt className="text-ink-500">{q}</dt>
                   <dd className="font-medium text-ink-800">{a}</dd>

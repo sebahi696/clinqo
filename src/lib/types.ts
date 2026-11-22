@@ -41,6 +41,7 @@ export interface Tenant {
   brandColor: string;
   metaAdAccountId?: string;
   metaPageName?: string; // Facebook page that runs the lead forms
+  leadDisplay: LeadDisplay; // what the clinic sees about ad leads (set by the Clinqo marketer)
   monthlyFeeUSD: number;
   createdAt: string;
   limits: { users: number; branches: number };
@@ -142,6 +143,7 @@ export interface Lead {
   ownerId?: string;
   note?: string;
   formName?: string; // Meta lead form the lead came from
+  formId?: string;
   answers?: Record<string, string>; // answers to the lead form questions
   contactedAt?: string;
 }
@@ -266,6 +268,34 @@ export interface Campaign {
   impressions: number;
   clicks: number;
   startDate: string;
+}
+
+export interface LeadDisplay {
+  showCampaign: boolean; // campaign & form names on lead cards
+  showAnswers: boolean; // lead form answers (only questions marked visible on the form)
+  sourceLabel: string; // how ad leads are labelled for the clinic, e.g. "Online ad"
+}
+
+export interface LeadForm {
+  id: string;
+  tenantId: string;
+  metaFormId: string;
+  name: string;
+  campaignId?: string;
+  questions: string[];
+  interestQuestion?: string; // answer used as the lead's "interested in"
+  visibleQuestions: string[]; // answers the clinic can see
+  status: 'ACTIVE' | 'ARCHIVED';
+}
+
+export interface OptimizationLog {
+  id: string;
+  tenantId: string;
+  at: string;
+  author: string;
+  kind: 'budget' | 'creative' | 'audience' | 'offer' | 'pause' | 'launch' | 'note';
+  campaignId?: string;
+  text: string;
 }
 
 export interface MarketingPlan {

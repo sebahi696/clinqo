@@ -6,6 +6,7 @@ import { Card, Field, PageHeader, Toggle } from '../../components/ui';
 import { MODULES, PRESETS } from '../../lib/modules';
 import type { PlanKey, Tenant, Vertical } from '../../lib/types';
 import { cx } from '../../lib/utils';
+import { DEFAULT_LEAD_DISPLAY } from '../../lib/seed';
 import { useDB } from '../../store/db';
 
 const STEPS = ['Business', 'Business model & modules', 'Meta ads', 'Review'];
@@ -36,6 +37,7 @@ export default function TenantNew() {
     brandColor: COLORS[0],
     monthlyFeeUSD: PRESETS.growth.fee,
     limits: { users: 10, branches: 1 },
+    leadDisplay: { ...DEFAULT_LEAD_DISPLAY },
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const canNext = step !== 0 || (f.name.trim() && f.ownerName.trim());

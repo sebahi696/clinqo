@@ -1,4 +1,4 @@
-import { Activity, Building2, LayoutGrid, LogOut, Megaphone, Menu, Plus } from 'lucide-react';
+import { Activity, Building2, LayoutGrid, LogOut, Megaphone, Menu, Plus, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDB } from '../store/db';
@@ -8,6 +8,7 @@ import Logo from './Logo';
 const NAV = [
   { to: '/admin', label: 'Overview', icon: LayoutGrid, end: true },
   { to: '/admin/tenants', label: 'Tenants', icon: Building2 },
+  { to: '/admin/growth', label: 'Growth (ads)', icon: TrendingUp },
   { to: '/admin/meta', label: 'Meta ad accounts', icon: Megaphone },
   { to: '/admin/activity', label: 'Activity log', icon: Activity },
 ];

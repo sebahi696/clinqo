@@ -2,7 +2,7 @@ import { Download, Plus, Search, Upload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Field, Modal, PageHeader } from '../../components/ui';
-import { fullName } from '../../lib/hooks';
+import { fullName, useSourceLabel } from '../../lib/hooks';
 import type { LeadSource, Patient } from '../../lib/types';
 import { download, fmtDate, parseCSV, SOURCE_LABEL, toCSV, uid, usd } from '../../lib/utils';
 import { useDB, useT, useTenant } from '../../store/db';
@@ -10,6 +10,7 @@ import { useDB, useT, useTenant } from '../../store/db';
 export default function Patients() {
   const tenant = useTenant()!;
   const patients = useT('patients');
+  const label = useSourceLabel();
   const appts = useT('appointments');
   const invoices = useT('invoices');
   const { insert, importPatients } = useDB.getState();
@@ -107,7 +108,7 @@ export default function Patients() {
                     {p.phone}
                   </td>
                   <td className="td">
-                    <span className={p.source === 'meta_ads' ? 'text-[#0866ff]' : 'text-ink-600'}>{SOURCE_LABEL[p.source]}</span>
+                    <span className={p.source === 'meta_ads' ? 'text-[#0866ff]' : 'text-ink-600'}>{label(p.source)}</span>
                   </td>
                   <td className="td text-end">{s?.visits ?? 0}</td>
                   <td className="td text-end font-medium">{usd(s?.spent ?? 0)}</td>

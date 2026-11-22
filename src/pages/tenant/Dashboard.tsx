@@ -3,11 +3,11 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Avatar, Badge, Bar, Card, PageHeader, Stat } from '../../components/ui';
-import { fullName, useCan, useLookup, usePatientMap } from '../../lib/hooks';
-import { campaignFunnels, revenueByDay, sumFunnels } from '../../lib/metrics';
-import { ago, fmtTime, pct, sameDay, SOURCE_LABEL, STATUS_LABEL, STATUS_STYLE, usd } from '../../lib/utils';
+import { fullName, useCan, useLookup, usePatientMap, useSourceLabel } from '../../lib/hooks';
+import { revenueByDay } from '../../lib/metrics';
+import { ago, fmtTime, pct, sameDay, STATUS_LABEL, STATUS_STYLE, usd } from '../../lib/utils';
 import type { LeadSource } from '../../lib/types';
-import { useDB, useMe, useT, useTenant } from '../../store/db';
+import { useMe, useT, useTenant } from '../../store/db';
 
 export default function Dashboard() {
   const tenant = useTenant()!;
@@ -19,7 +19,6 @@ export default function Dashboard() {
   const products = useT('products');
   const patients = usePatientMap();
   const lk = useLookup();
-  const db = useDB();
   const now = new Date();
 
   const today = appts.filter((a) => sameDay(new Date(a.start), now) && a.status !== 'cancelled').sort((a, b) => a.start.localeCompare(b.start));
@@ -32,7 +31,6 @@ export default function Dashboard() {
   const past30 = appts.filter((a) => new Date(a.start) < now && Date.now() - new Date(a.start).getTime() < 30 * 864e5);
   const noShow = past30.filter((a) => a.status === 'no_show').length / Math.max(1, past30.length);
   const low = products.filter((p) => p.stock <= p.lowStock);
-  const f = sumFunnels(campaignFunnels(db, tenant.id));
 
   const bySource = useMemo(() => {
     const m = new Map<LeadSource, number>();
@@ -49,7 +47,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {can('appointments') && <Stat label="Appointments today" value={today.length} hint={`${today.filter((a) => a.status === 'confirmed').length} confirmed`} icon={<CalendarDays size={16} />} />}
         {can('pos') && <Stat label="Revenue today" value={usd(revToday)} hint={`${usd(rev30)} last 30 days`} icon={<DollarSign size={16} />} tone="brand" />}
-        {can('crm') && <Stat label="New leads (24h)" value={newLeads} hint={`${leads.filter((l) => l.source === 'meta_ads' && Date.now() - new Date(l.createdAt).getTime() < 864e5).length} from Meta lead ads`} icon={<UserPlus size={16} />} />}
+        {can('crm') && <Stat label="New leads (24h)" value={newLeads} hint={`${leads.filter((l) => l.source === 'meta_ads' && Date.now() - new Date(l.createdAt).getTime() < 864e5).length} from ${(tenant.leadDisplay?.sourceLabel || 'ads').toLowerCase()}s`} icon={<UserPlus size={16} />} />}
         {can('crm') && <Stat label="Leads to call now" value={waiting.length} tone={waiting.length ? 'bad' : 'good'} hint={waiting.length ? <Link to="/app/leads" className="underline">Oldest waiting {ago(oldest!)}</Link> : 'All leads contacted'} icon={<PhoneCall size={16} />} />}
       </div>
 
@@ -106,28 +104,6 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        {can('marketing') && (
-          <Card title="Ads performance (to date)" actions={<Link to="/app/marketing" className="btn-ghost btn-sm">Details</Link>}>
-            <dl className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <dt className="text-xs text-ink-400">Ad spend</dt>
-                <dd className="text-lg font-semibold">{usd(f.spend)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-ink-400">Revenue from ad patients</dt>
-                <dd className="text-lg font-semibold text-brand-700">{usd(f.revenue)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-ink-400">Cost per lead</dt>
-                <dd className="font-semibold">{usd(f.cpl, 2)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-ink-400">Return on ad spend</dt>
-                <dd className="font-semibold">{f.roas.toFixed(1)}×</dd>
-              </div>
-            </dl>
-          </Card>
-        )}
         {can('crm') && can('pos') && (
           <Card title="Leads by source">
             <SourceBars bySource={bySource} max={maxSrc} />
@@ -156,12 +132,13 @@ export default function Dashboard() {
 }
 
 function SourceBars({ bySource, max }: { bySource: [LeadSource, number][]; max: number }) {
+  const label = useSourceLabel();
   return (
     <ul className="space-y-3">
       {bySource.map(([s, n]) => (
         <li key={s}>
           <div className="mb-1 flex justify-between text-xs">
-            <span className="text-ink-600">{SOURCE_LABEL[s]}</span>
+            <span className="text-ink-600">{label(s)}</span>
             <span className="font-medium text-ink-800">{n}</span>
           </div>
           <Bar value={n} max={max} color={s === 'meta_ads' ? 'bg-[#0866ff]' : 'bg-brand-500'} />

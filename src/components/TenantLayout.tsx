@@ -7,7 +7,6 @@ import {
   Gift,
   LayoutDashboard,
   LogOut,
-  Megaphone,
   Menu,
   ReceiptText,
   Settings,
@@ -51,7 +50,6 @@ export default function TenantLayout() {
     {
       title: t('g_growth'),
       items: [
-        { to: '/app/marketing', key: 'marketing', icon: Megaphone, mod: 'marketing' },
         { to: '/app/leads', key: 'leads', icon: Funnel, mod: 'crm', badge: fresh },
         { to: '/app/automations', key: 'automations', icon: Workflow, mod: 'automations' },
       ],

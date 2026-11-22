@@ -6,13 +6,15 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { PRESETS } from '../lib/modules';
-import { buildSeed, DB_VERSION, starterCatalog, type DB } from '../lib/seed';
+import { buildSeed, DB_VERSION, FORM_QUESTIONS, starterCatalog, type DB } from '../lib/seed';
 import type {
   Appointment,
   Invoice,
   Lang,
   Lead,
+  LeadForm,
   LeadStage,
+  OptimizationLog,
   ModuleKey,
   Patient,
   Payment,
@@ -53,6 +55,11 @@ interface Store extends DB {
   connectMeta: (businessName: string) => void;
   disconnectMeta: () => void;
   syncMeta: () => void;
+  addAdAccount: (a: { id: string; name: string; currency: string; tenantId?: string }) => string | null;
+  assignAdAccount: (tenantId: string, accountId: string | undefined) => void;
+  syncForms: (tenantId: string) => number;
+  importCampaigns: (tenantId: string) => number;
+  logOpt: (e: Omit<OptimizationLog, 'id' | 'at' | 'author'>) => void;
   // tenant ops
   moveLead: (id: string, stage: LeadStage) => void;
   convertLead: (leadId: string) => string;
@@ -165,6 +172,7 @@ export const useDB = create<Store>()(
             .map((c) => {
               const svcs = get().services.filter((x) => x.tenantId === c.tenantId);
               const svc = svcs[Math.floor(Math.random() * svcs.length)];
+              const form = get().leadForms.find((f) => f.campaignId === c.id && f.status === 'ACTIVE');
               return {
                 id: uid('ld'),
                 tenantId: c.tenantId,
@@ -176,13 +184,72 @@ export const useDB = create<Store>()(
                 stage: 'new' as const,
                 value: svc?.price ?? 0,
                 createdAt: new Date().toISOString(),
-                formName: `${c.name} – form`,
-                answers: { 'What are you interested in?': svc?.name ?? '', 'Best time to call?': 'Morning' },
+                formName: form?.name ?? `${c.name} – form`,
+                formId: form?.id,
+                answers: { 'What are you interested in?': svc?.name ?? '', 'Best time to call?': 'Morning', Area: 'Beirut' },
               };
             });
           set({ leads: [...fresh, ...get().leads] });
           get().log(`Synced Meta ad insights and ${fresh.length} new lead-form leads (simulated)`);
         },
+
+        addAdAccount: ({ id, name, currency, tenantId }) => {
+          const digits = id.trim().replace(/^act_/i, '');
+          if (!/^\d{6,20}$/.test(digits)) return 'Enter the ad account ID: the number shown in Ads Manager (with or without "act_").';
+          const actId = 'act_' + digits;
+          if (get().meta.adAccounts.some((a) => a.id === actId)) return 'This ad account is already in the list.';
+          const nm = name.trim() || `Ad account ${digits.slice(-4)}`;
+          set({ meta: { ...get().meta, adAccounts: [...get().meta.adAccounts, { id: actId, name: nm, currency }] } });
+          get().log(`Added ad account ${nm} (${actId})`);
+          if (tenantId) get().assignAdAccount(tenantId, actId);
+          return null;
+        },
+        assignAdAccount: (tenantId, accountId) => {
+          get().updateTenant(tenantId, { metaAdAccountId: accountId });
+          get().log(`${accountId ? `Connected ad account ${accountId} to` : 'Disconnected the ad account from'} ${get().tenants.find((t) => t.id === tenantId)?.name}`, tenantId);
+        },
+        importCampaigns: (tenantId) => {
+          // Simulates reading campaigns from the tenant's ad account (Marketing API: GET /act_x/campaigns)
+          const t = get().tenants.find((x) => x.id === tenantId);
+          if (!t?.metaAdAccountId) return 0;
+          const svc = get().services.find((x) => x.tenantId === tenantId);
+          const c = {
+            id: uid('cp'),
+            tenantId,
+            metaCampaignId: '23851' + Math.floor(1e8 + Math.random() * 9e8),
+            name: `${svc?.name ?? 'New offer'} – lead form – ${new Date().toLocaleDateString('en-GB', { month: 'short' })}`,
+            objective: 'LEADS' as const,
+            status: 'ACTIVE' as const,
+            dailyBudget: 10,
+            spend: 0,
+            impressions: 0,
+            clicks: 0,
+            startDate: new Date().toISOString().slice(0, 10),
+          };
+          set({ campaigns: [...get().campaigns, c] });
+          get().log(`Found new campaign in Ads Manager: ${c.name}`, tenantId);
+          get().syncForms(tenantId);
+          return 1;
+        },
+        syncForms: (tenantId) => {
+          // Simulates reading the page's instant forms used by the tenant's lead campaigns
+          const missing = get().campaigns.filter((c) => c.tenantId === tenantId && !get().leadForms.some((f) => f.campaignId === c.id));
+          const forms: LeadForm[] = missing.map((c) => ({
+            id: uid('lf'),
+            tenantId,
+            metaFormId: String(Math.floor(1e14 + Math.random() * 8e14)),
+            name: `${c.name} – form`,
+            campaignId: c.id,
+            questions: [...FORM_QUESTIONS],
+            interestQuestion: 'What are you interested in?',
+            visibleQuestions: ['What are you interested in?', 'Best time to call?'],
+            status: 'ACTIVE',
+          }));
+          set({ leadForms: [...get().leadForms, ...forms] });
+          if (forms.length) get().log(`Synced ${forms.length} lead form(s)`, tenantId);
+          return forms.length;
+        },
+        logOpt: (e) => set({ optLogs: [{ ...e, id: uid('ol'), at: new Date().toISOString(), author: actor() }, ...get().optLogs] }),
 
         moveLead: (id, stage) => {
           const l = get().leads.find((x) => x.id === id);

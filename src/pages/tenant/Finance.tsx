@@ -7,7 +7,7 @@ import { download, fmtDate, lbp, METHOD_LABEL, monthKey, pct, sameDay, toCSV, ui
 import { useDB, useT, useTenant } from '../../store/db';
 
 type TabKey = 'pnl' | 'drawer' | 'expenses' | 'commissions';
-const CATS = ['Rent', 'Salaries', 'Generator subscription', 'Electricity (EDL)', 'Supplies', 'Internet & phone', 'Meta ad spend', 'Marketing agency', 'Maintenance', 'Clinqo subscription', 'Other'];
+const CATS = ['Rent', 'Salaries', 'Generator subscription', 'Electricity (EDL)', 'Supplies', 'Internet & phone', 'Advertising', 'Marketing agency', 'Maintenance', 'Clinqo subscription', 'Other'];
 
 export default function Finance() {
   const tenant = useTenant()!;

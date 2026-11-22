@@ -1,18 +1,16 @@
-import { ExternalLink, Plus, Trash2, X } from 'lucide-react';
+import { ExternalLink, Megaphone, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ModuleToggles, PresetPicker } from '../../components/ModuleMatrix';
-import { Badge, Card, Field, PageHeader, Stat, Tabs, Toggle } from '../../components/ui';
+import { Badge, Card, Field, PageHeader, Stat, Tabs } from '../../components/ui';
 import { campaignFunnels, sumFunnels } from '../../lib/metrics';
 import { PRESETS, ROLE_LABEL } from '../../lib/modules';
-import type { MarketingPlan, Role, Tenant } from '../../lib/types';
-import { cx, fmtDate, num, uid, usd } from '../../lib/utils';
+import type { Role, Tenant } from '../../lib/types';
+import { fmtDate, num, uid, usd } from '../../lib/utils';
 import { useDB } from '../../store/db';
 import { statusStyle } from './Overview';
 
-type TabKey = 'overview' | 'features' | 'channels' | 'plan' | 'users';
-const PHASES: MarketingPlan['phase'][] = ['plan', 'configuration', 'ad_spend', 'optimizing'];
-const PHASE_LABEL = { plan: '1 · Marketing plan', configuration: '2 · Configuration', ad_spend: '3 · Ad spend', optimizing: '4 · Optimizing' };
+type TabKey = 'overview' | 'features' | 'users';
 
 export default function TenantDetail() {
   const { id } = useParams();
@@ -41,6 +39,12 @@ export default function TenantDetail() {
           </span>
         }
         actions={
+          <>
+          {t.modules.marketing && (
+            <Link to={`/admin/growth/${t.id}`} className="btn-secondary">
+              <Megaphone size={15} /> Growth workspace
+            </Link>
+          )}
           <button
             className="btn-primary"
             onClick={() => {
@@ -50,6 +54,7 @@ export default function TenantDetail() {
           >
             <ExternalLink size={15} /> Open as tenant
           </button>
+          </>
         }
       />
       <Tabs<TabKey>
@@ -58,8 +63,6 @@ export default function TenantDetail() {
         tabs={[
           { key: 'overview', label: 'Overview' },
           { key: 'features', label: 'Features & plan' },
-          { key: 'channels', label: 'Meta ads & leads' },
-          { key: 'plan', label: 'Marketing plan' },
           { key: 'users', label: 'Users' },
         ]}
       />
@@ -87,8 +90,6 @@ export default function TenantDetail() {
           </div>
         </div>
       )}
-      {tab === 'channels' && <ChannelsTab t={t} />}
-      {tab === 'plan' && <PlanTab t={t} />}
       {tab === 'users' && <UsersTab t={t} />}
     </>
   );
@@ -155,191 +156,6 @@ function OverviewTab({ t, counts, f }: { t: Tenant; counts: { patients: number; 
           <p className="mt-4 border-t border-ink-50 pt-3 text-xs text-ink-400">Created {fmtDate(t.createdAt)} · {counts.users} users</p>
         </Card>
       </div>
-    </div>
-  );
-}
-
-function ChannelsTab({ t }: { t: Tenant }) {
-  const { meta, tenants, updateTenant, log } = useDB();
-  const used = new Map(tenants.filter((x) => x.metaAdAccountId && x.id !== t.id).map((x) => [x.metaAdAccountId!, x.name]));
-  const campaigns = useDB((s) => s.campaigns.filter((c) => c.tenantId === t.id));
-  return (
-    <div className="space-y-6">
-      {!t.modules.marketing && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          The Marketing module is off for this tenant{t.hasOwnAgency ? ' (they work with their own agency)' : ''}. Their leads are added by hand or imported from a file.
-        </div>
-      )}
-      <Card title="Meta ad account">
-        {!meta.connected ? (
-          <p className="text-sm text-ink-500">
-            Connect the Clinqo Business Manager first in <Link className="text-brand-700 underline" to="/admin/meta">Meta ad accounts</Link>.
-          </p>
-        ) : (
-          <div className="max-w-lg">
-            <Field label={`Ad account from ${meta.businessName}`}>
-              <select
-                className="input"
-                disabled={!t.modules.marketing}
-                value={t.metaAdAccountId ?? ''}
-                onChange={(e) => {
-                  updateTenant(t.id, { metaAdAccountId: e.target.value || undefined });
-                  log(`Assigned ad account ${e.target.value || 'none'} to ${t.name}`, t.id);
-                }}
-              >
-                <option value="">— not assigned —</option>
-                {meta.adAccounts.map((a) => (
-                  <option key={a.id} value={a.id} disabled={used.has(a.id)}>
-                    {a.name} · {a.id}
-                    {used.has(a.id) ? ` (used by ${used.get(a.id)})` : ''}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <p className="mt-2 text-xs text-ink-500">Campaign spend from this account is synced daily into the tenant's Marketing dashboard and Finance as an expense.</p>
-          </div>
-        )}
-        {campaigns.length > 0 && (
-          <table className="mt-5 w-full text-sm">
-            <thead>
-              <tr className="border-b border-ink-100">
-                <th className="th ps-0">Campaign</th>
-                <th className="th">Status</th>
-                <th className="th text-end">Daily</th>
-                <th className="th text-end">Spend</th>
-              </tr>
-            </thead>
-            <tbody>
-              {campaigns.map((c) => (
-                <tr key={c.id} className="border-b border-ink-50">
-                  <td className="py-2">{c.name}</td>
-                  <td className="td">
-                    <Badge className={c.status === 'ACTIVE' ? 'bg-brand-50 text-brand-700 ring-brand-200' : undefined}>{c.status}</Badge>
-                  </td>
-                  <td className="td text-end">{usd(c.dailyBudget)}</td>
-                  <td className="td text-end">{usd(c.spend)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
-      <Card title="Lead delivery">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Facebook page running the lead forms">
-            <input className="input" disabled={!t.modules.marketing} value={t.metaPageName ?? ''} onChange={(e) => updateTenant(t.id, { metaPageName: e.target.value })} placeholder="e.g. Smile Studio Dental Beirut" />
-          </Field>
-          <div className="text-sm text-ink-600">
-            <span className="label">How leads arrive</span>
-            Lead form ads → Clinqo CRM, tagged with campaign and form answers. The clinic calls or WhatsApps them from the Leads page. Leads from other sources are added by hand or imported.
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-ink-400">No WhatsApp, Instagram or Messenger API is used. Test build: lead delivery is simulated; the clinic can also import a Meta Leads Center CSV.</p>
-      </Card>
-    </div>
-  );
-}
-
-function ListEditor({ label, items, onChange }: { label: string; items: string[]; onChange: (v: string[]) => void }) {
-  const [v, setV] = useState('');
-  return (
-    <div>
-      <span className="label">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {items.map((x, i) => (
-          <span key={i} className="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2.5 py-1 text-xs text-ink-700">
-            {x}
-            <button onClick={() => onChange(items.filter((_, j) => j !== i))} aria-label="Remove">
-              <X size={12} />
-            </button>
-          </span>
-        ))}
-      </div>
-      <form
-        className="mt-2 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (v.trim()) onChange([...items, v.trim()]);
-          setV('');
-        }}
-      >
-        <input className="input" value={v} onChange={(e) => setV(e.target.value)} placeholder="Add…" />
-        <button className="btn-secondary">
-          <Plus size={14} />
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function PlanTab({ t }: { t: Tenant }) {
-  const plan = useDB((s) => s.plans.find((p) => p.tenantId === t.id));
-  const { log } = useDB.getState();
-  const save = (data: Partial<MarketingPlan>) =>
-    useDB.setState((s) => ({
-      plans: s.plans.some((p) => p.tenantId === t.id)
-        ? s.plans.map((p) => (p.tenantId === t.id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p))
-        : [...s.plans, { tenantId: t.id, goal: '', monthlyBudget: 300, targetCPL: 6, targetBookings: 20, offers: [], audiences: [], channels: [], approvedByClient: false, phase: 'plan', updatedAt: new Date().toISOString(), ...data }],
-    }));
-  if (!t.modules.marketing)
-    return <div className="card p-6 text-sm text-ink-500">Marketing is off for this tenant. Turn it on under Features to build a growth plan.</div>;
-  if (!plan)
-    return (
-      <div className="card p-6">
-        <button className="btn-primary" onClick={() => save({})}>
-          Start marketing plan
-        </button>
-      </div>
-    );
-  const idx = PHASES.indexOf(plan.phase);
-  return (
-    <div className="space-y-6">
-      <Card title="Growth phase">
-        <div className="grid gap-2 sm:grid-cols-4">
-          {PHASES.map((ph, i) => (
-            <button
-              key={ph}
-              onClick={() => {
-                save({ phase: ph });
-                log(`${t.name} moved to phase: ${PHASE_LABEL[ph]}`, t.id);
-              }}
-              className={cx('rounded-lg border px-3 py-2.5 text-start text-sm', i === idx ? 'border-brand-500 bg-brand-50 font-semibold text-brand-800' : i < idx ? 'border-brand-200 text-brand-700' : 'border-ink-100 text-ink-500')}
-            >
-              {PHASE_LABEL[ph]}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 flex items-center gap-3 text-sm">
-          <Toggle on={plan.approvedByClient} onChange={() => save({ approvedByClient: !plan.approvedByClient })} />
-          <span className="text-ink-700">Client approved the plan</span>
-          {!plan.approvedByClient && plan.phase !== 'plan' && <Badge className="bg-rose-50 text-rose-700 ring-rose-200">Not approved yet</Badge>}
-        </div>
-      </Card>
-      <Card title="Plan">
-        <div className="grid gap-4 sm:grid-cols-4">
-          <Field label="Goal" className="sm:col-span-4">
-            <input className="input" value={plan.goal} onChange={(e) => save({ goal: e.target.value })} placeholder="e.g. 40 new implant consultations per month" />
-          </Field>
-          <Field label="Monthly ad budget ($)">
-            <input className="input" type="number" value={plan.monthlyBudget} onChange={(e) => save({ monthlyBudget: +e.target.value })} />
-          </Field>
-          <Field label="Target cost per lead ($)">
-            <input className="input" type="number" value={plan.targetCPL} onChange={(e) => save({ targetCPL: +e.target.value })} />
-          </Field>
-          <Field label="Target bookings / month">
-            <input className="input" type="number" value={plan.targetBookings} onChange={(e) => save({ targetBookings: +e.target.value })} />
-          </Field>
-          <div className="text-xs text-ink-500 sm:pt-6">
-            Implied max cost per booking: <b className="text-ink-800">{plan.targetBookings ? usd(plan.monthlyBudget / plan.targetBookings) : '—'}</b>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-5 md:grid-cols-3">
-          <ListEditor label="Offers" items={plan.offers} onChange={(offers) => save({ offers })} />
-          <ListEditor label="Audiences" items={plan.audiences} onChange={(audiences) => save({ audiences })} />
-          <ListEditor label="Channels" items={plan.channels} onChange={(channels) => save({ channels })} />
-        </div>
-        <p className="mt-5 text-xs text-ink-400">The client sees this plan read-only in their Marketing page.</p>
-      </Card>
     </div>
   );
 }

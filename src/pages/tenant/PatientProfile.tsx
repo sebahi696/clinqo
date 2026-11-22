@@ -4,9 +4,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import BookingModal from '../../components/BookingModal';
 import ToothChart from '../../components/ToothChart';
 import { Badge, Card, Field, Modal, Stat, Tabs } from '../../components/ui';
-import { fullName, useCan, useLookup } from '../../lib/hooks';
+import { fullName, useCan, useLookup, useSourceLabel } from '../../lib/hooks';
 import type { Patient } from '../../lib/types';
-import { fmtDate, fmtDateTime, SOURCE_LABEL, STATUS_LABEL, STATUS_STYLE, uid, usd } from '../../lib/utils';
+import { fmtDate, fmtDateTime, STATUS_LABEL, STATUS_STYLE, uid, usd } from '../../lib/utils';
 import { useDB, useT, useTenant } from '../../store/db';
 
 type TabKey = 'timeline' | 'appointments' | 'chart' | 'notes' | 'consents' | 'packages' | 'invoices';
@@ -24,6 +24,8 @@ export default function PatientProfile() {
   const pkgs = useT('patientPackages').filter((p) => p.patientId === id);
   const defs = useT('packageDefs');
   const campaigns = useT('campaigns');
+  const label = useSourceLabel();
+  const showCamp = !!tenant.leadDisplay?.showCampaign;
   const lk = useLookup();
   const { patch, insert } = useDB.getState();
   const [tab, setTab] = useState<TabKey>('timeline');
@@ -34,17 +36,17 @@ export default function PatientProfile() {
 
   const timeline = useMemo(() => {
     const items: { at: string; kind: string; text: string; sub?: string }[] = [];
-    if (patient) items.push({ at: patient.createdAt, kind: 'Joined', text: `Profile created from ${SOURCE_LABEL[patient.source]}`, sub: campaigns.find((c) => c.id === patient.campaignId)?.name });
+    if (patient) items.push({ at: patient.createdAt, kind: 'Joined', text: `Profile created from ${label(patient.source)}`, sub: showCamp ? campaigns.find((c) => c.id === patient.campaignId)?.name : undefined });
     appts.forEach((a) => items.push({ at: a.start, kind: 'Appointment', text: `${lk.service.get(a.serviceId)?.name} with ${lk.staff.get(a.staffId)?.name}`, sub: STATUS_LABEL[a.status] }));
     invoices.forEach((i) => items.push({ at: i.createdAt, kind: 'Payment', text: `Invoice ${i.number} · ${usd(i.total)}`, sub: i.items.map((x) => x.name).join(', ') }));
     notes.forEach((n) => items.push({ at: n.date, kind: 'Clinical note', text: n.title, sub: n.body }));
     return items.sort((a, b) => b.at.localeCompare(a.at));
-  }, [patient, appts, invoices, notes, lk, campaigns]);
+  }, [patient, appts, invoices, notes, lk, campaigns, showCamp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!patient) return <p className="text-ink-500">Not found.</p>;
   const spent = invoices.reduce((s, i) => s + i.total, 0);
   const due = invoices.reduce((s, i) => s + Math.max(0, i.total - i.payments.reduce((a, p) => a + p.amountUSD, 0)), 0);
-  const camp = campaigns.find((c) => c.id === patient.campaignId);
+  const camp = showCamp ? campaigns.find((c) => c.id === patient.campaignId) : undefined;
   const upcoming = appts.filter((a) => new Date(a.start) > new Date() && !['cancelled'].includes(a.status));
   const isDental = tenant.vertical === 'dental';
 
@@ -69,7 +71,7 @@ export default function PatientProfile() {
             <span dir="ltr">{patient.phone}</span>
             {patient.email && <span>· {patient.email}</span>}
             {patient.dob && <span>· born {fmtDate(patient.dob)}</span>}
-            <Badge className={patient.source === 'meta_ads' ? 'bg-[#0866ff]/10 text-[#0866ff] ring-[#0866ff]/20' : undefined}>{SOURCE_LABEL[patient.source]}</Badge>
+            <Badge className={patient.source === 'meta_ads' ? 'bg-[#0866ff]/10 text-[#0866ff] ring-[#0866ff]/20' : undefined}>{label(patient.source)}</Badge>
             {patient.tags.map((t) => (
               <Badge key={t} className="bg-amber-50 text-amber-700 ring-amber-200">
                 {t}
