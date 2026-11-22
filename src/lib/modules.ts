@@ -8,9 +8,8 @@ export interface ModuleMeta {
 }
 
 export const MODULES: ModuleMeta[] = [
-  { key: 'marketing', label: 'Marketing & Meta Ads', description: 'Clinqo-managed campaigns, ad spend, cost per patient, ROAS', group: 'Growth' },
-  { key: 'inbox', label: 'Unified inbox', description: 'WhatsApp, Instagram and Messenger conversations in one place', group: 'Growth' },
-  { key: 'automations', label: 'Automations', description: 'Reminders, recalls, follow-ups and review requests', group: 'Growth' },
+  { key: 'marketing', label: 'Marketing & Meta Ads', description: 'Clinqo marketer runs the ads; lead-form leads land in the CRM; spend, cost per patient, ROAS', group: 'Growth' },
+  { key: 'automations', label: 'Follow-ups', description: 'Reminder, recall and review lists with one-click WhatsApp/SMS (no messaging API)', group: 'Growth' },
   { key: 'crm', label: 'CRM', description: 'Leads pipeline and patient/client 360 profiles', group: 'Front desk' },
   { key: 'appointments', label: 'Appointments', description: 'Calendar by provider, booking, deposits, statuses', group: 'Front desk' },
   { key: 'clinical', label: 'Clinical records', description: 'Treatment notes, consent forms, dental chart', group: 'Clinic' },
@@ -39,11 +38,10 @@ export const PRESETS: Record<PlanKey, { label: string; description: string; modu
   },
   marketing: {
     label: 'Marketing only',
-    description: 'Ads + lead inbox + CRM pipeline, no POS or clinical',
+    description: 'Ads + Meta leads into the CRM pipeline + booking, no POS or clinical',
     modules: {
       ...all(false),
       marketing: true,
-      inbox: true,
       crm: true,
       appointments: true,
       automations: true,
@@ -72,7 +70,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 export const ROLE_ACCESS: Record<Exclude<Role, 'super_admin'>, ModuleKey[] | 'all'> = {
   owner: 'all',
   manager: 'all',
-  reception: ['inbox', 'crm', 'appointments', 'pos', 'packages', 'automations', 'clinical'],
+  reception: ['crm', 'appointments', 'pos', 'packages', 'automations', 'clinical'],
   provider: ['appointments', 'crm', 'clinical'],
   accountant: ['pos', 'finance', 'reports', 'inventory', 'packages'],
 };

@@ -9,7 +9,6 @@ import type {
   Campaign,
   ClinicalNote,
   ConsentRecord,
-  Conversation,
   Expense,
   GiftCard,
   Invoice,
@@ -49,7 +48,6 @@ export interface DB {
   products: Product[];
   patients: Patient[];
   leads: Lead[];
-  conversations: Conversation[];
   appointments: Appointment[];
   invoices: Invoice[];
   packageDefs: PackageDef[];
@@ -65,7 +63,7 @@ export interface DB {
   activity: ActivityLog[];
 }
 
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 const FEMALE = ['Maya', 'Rita', 'Nour', 'Lara', 'Yasmine', 'Cynthia', 'Joelle', 'Rania', 'Hiba', 'Lea', 'Carla', 'Tala', 'Sara', 'Dana', 'Mira', 'Zeina', 'Christelle', 'Layal'];
 const MALE = ['Karim', 'Ziad', 'Elie', 'Georges', 'Hadi', 'Ali', 'Omar', 'Rami', 'Fadi', 'Charbel', 'Marc', 'Jad', 'Hassan', 'Tony', 'Wael', 'Nabil'];
@@ -170,16 +168,16 @@ const COLORS = ['#1f9880', '#e46a48', '#6366f1', '#d97706', '#0ea5e9', '#a855f7'
 
 const CAMPAIGNS: Record<Vertical, [string, Campaign['objective'], number][]> = {
   dental: [
-    ['Implants – Free consult – Beirut 30km', 'MESSAGES', 25],
+    ['Implants – Free consult – Beirut 30km', 'LEADS', 25],
     ['Whitening summer offer', 'LEADS', 15],
-    ['Aligners – Instagram reels', 'MESSAGES', 12],
+    ['Aligners – Instagram reels', 'LEADS', 12],
   ],
   aesthetic: [
-    ['Botox first visit offer', 'MESSAGES', 20],
+    ['Botox first visit offer', 'LEADS', 20],
     ['Laser packages – women 22–45', 'LEADS', 18],
   ],
   spa: [
-    ['Couples massage – weekends', 'MESSAGES', 12],
+    ['Couples massage – weekends', 'LEADS', 12],
     ['Hammam & facial bundle', 'LEADS', 10],
     ['Gift cards – Mother’s Day', 'TRAFFIC', 8],
   ],
@@ -191,13 +189,6 @@ const INTEREST: Record<Vertical, string[]> = {
   aesthetic: ['Botox', 'Filler', 'Laser hair removal', 'HydraFacial', 'PRP'],
   spa: ['Couples massage', 'Hammam', 'Facial', 'Gift card', 'Membership'],
   medical: ['Consultation'],
-};
-
-const FIRST_MSG: Record<Vertical, string[]> = {
-  dental: ['Hi, how much is an implant?', 'Is the free consultation still available?', 'Bonjour, je voudrais un rendez-vous pour un détartrage', 'مرحبا، قديش سعر تبييض الأسنان؟', 'Do you do clear aligners?'],
-  aesthetic: ['Hello, price for botox please', 'Is the laser package still on offer?', 'مرحبا بدي موعد فيلر', 'Do you have an appointment this week for a HydraFacial?'],
-  spa: ['Hi! Couples massage available Saturday?', 'How much is the hammam?', 'I want to buy a gift card for my mom', 'مرحبا، عندكم مواعيد اليوم؟'],
-  medical: ['Hello, I need a consultation'],
 };
 
 export function buildSeed(): DB {
@@ -229,7 +220,6 @@ export function buildSeed(): DB {
     products: [],
     patients: [],
     leads: [],
-    conversations: [],
     appointments: [],
     invoices: [],
     packageDefs: [],
@@ -271,15 +261,14 @@ export function buildSeed(): DB {
         city: 'Beirut – Achrafieh',
         plan: 'growth',
         status: 'active',
-        businessModel: 'Premium dental clinic. Growth via implants and whitening offers on Meta. WhatsApp is the main booking channel.',
+        businessModel: 'Premium dental clinic. Growth via implants and whitening offers on Meta. Front desk calls every lead within 15 minutes.',
         hasOwnAgency: false,
         ownerName: 'Dr. Nadine Khoury',
         ownerEmail: 'nadine@smilestudio.lb',
         phone: '+961 1 201 445',
         brandColor: '#1f9880',
         metaAdAccountId: 'act_2203911844',
-        whatsappNumber: '+961 76 220 145',
-        instagramHandle: '@smilestudio.lb',
+        metaPageName: 'Smile Studio Dental Beirut',
       },
       patients: 70,
       days: 45,
@@ -300,8 +289,6 @@ export function buildSeed(): DB {
         ownerEmail: 'lina@lumiere.lb',
         phone: '+961 9 640 118',
         brandColor: '#a855f7',
-        whatsappNumber: '+961 71 640 118',
-        instagramHandle: '@lumiere.clinic',
       },
       patients: 55,
       days: 40,
@@ -323,8 +310,7 @@ export function buildSeed(): DB {
         phone: '+961 1 990 312',
         brandColor: '#d97706',
         metaAdAccountId: 'act_2203911851',
-        whatsappNumber: '+961 78 990 312',
-        instagramHandle: '@cedar.spa',
+        metaPageName: 'Cedar Wellness Spa',
       },
       patients: 60,
       days: 40,
@@ -346,6 +332,7 @@ export function buildSeed(): DB {
         phone: '+961 8 812 004',
         brandColor: '#0ea5e9',
         metaAdAccountId: 'act_2203911877',
+        metaPageName: 'Karam Dermatology Zahle',
       },
       patients: 0,
       days: 0,
@@ -452,7 +439,7 @@ export function buildSeed(): DB {
               ? ['Couples massage + hammam $199', 'Gift card bonus: $20 on $100']
               : ['First consultation $35', 'Free mole check for new patients in March'],
         audiences: ['Beirut + 30km, 25–55', 'Lookalike of paying patients', 'Instagram engagers 365d'],
-        channels: ['Meta Ads (FB + IG)', 'Click-to-WhatsApp', 'Instagram content'],
+        channels: ['Meta lead form ads (Facebook + Instagram)', 'Retargeting: website & Instagram engagers'],
         approvedByClient: v !== 'medical',
         phase: v === 'medical' ? 'plan' : 'optimizing',
         updatedAt: iso(daysAgo(v === 'medical' ? 1 : 12)),
@@ -583,7 +570,7 @@ export function buildSeed(): DB {
       const age = int(0, Math.min(ts.days, 35));
       const stage: LeadStage = age < 1 ? pick(['new', 'new', 'contacted'] as LeadStage[]) : pick(['contacted', 'contacted', 'contacted', 'lost', 'lost', 'lost', 'lost', 'consult_booked', 'attended', 'won', 'won'] as LeadStage[]);
       const female = r() > 0.35;
-      const src: LeadSource = tenant.modules.marketing ? pick(['meta_ads', 'meta_ads', 'meta_ads', 'meta_ads', 'meta_ads', 'meta_ads', 'instagram', 'whatsapp', 'website']) : pick(['instagram', 'whatsapp', 'referral', 'website']);
+      const src: LeadSource = tenant.modules.marketing ? pick(['meta_ads', 'meta_ads', 'meta_ads', 'meta_ads', 'meta_ads', 'meta_ads', 'meta_ads', 'referral', 'website']) : pick(['instagram', 'whatsapp', 'referral', 'website']);
       const interest = pick(INTEREST[v]);
       const svc = services.find((s) => s.name.toLowerCase().includes(interest.toLowerCase().split(' ')[0])) ?? pick(services);
       const matched = stage === 'won' || stage === 'attended' ? pick(patients.filter((p) => p.source === 'meta_ads' || p.source === 'instagram' || p.source === 'whatsapp')) : undefined;
@@ -600,33 +587,18 @@ export function buildSeed(): DB {
         createdAt: iso(pastAgo(age, int(8, 22), int(0, 59))),
         firstResponseMins: stage === 'new' ? undefined : int(1, 95),
         patientId: matched?.id,
+        ...(src === 'meta_ads'
+          ? {
+              formName: `${interest} – lead form`,
+              answers: {
+                'What are you interested in?': interest,
+                'Best time to call?': pick(['Morning', 'Afternoon', 'After 5pm']),
+                'Area': pick(['Beirut', 'Metn', 'Jounieh', 'Baabda', 'Keserwan']),
+              },
+            }
+          : {}),
       });
     }
-
-    // Conversations (most recent leads)
-    const recent = db.leads.filter((l) => l.tenantId === tid).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 9);
-    recent.forEach((l, i) => {
-      const t0 = new Date(l.createdAt);
-      const msgs: Conversation['messages'] = [{ id: id('m'), from: 'contact', text: pick(FIRST_MSG[v]), at: iso(t0) }];
-      if (l.stage !== 'new') {
-        msgs.push({ id: id('m'), from: 'bot', text: `Hi ${l.name.split(' ')[0]}! Thanks for reaching ${tenant.name}. Which day suits you best for a visit?`, at: iso(new Date(t0.getTime() + 60000)) });
-        msgs.push({ id: id('m'), from: 'contact', text: pick(['Saturday morning if possible', 'Any day after 5pm', 'Tomorrow?', 'شو الأسعار؟']), at: iso(new Date(t0.getTime() + 6 * 60000)) });
-        if (l.stage !== 'contacted') msgs.push({ id: id('m'), from: 'staff', text: 'You are booked ✅ We will send you a reminder the day before. Location: ' + tenant.city, at: iso(new Date(t0.getTime() + 15 * 60000)) });
-      }
-      db.conversations.push({
-        id: id('cv'),
-        tenantId: tid,
-        channel: l.source === 'instagram' ? 'instagram' : i % 4 === 3 ? 'messenger' : 'whatsapp',
-        contactName: l.name,
-        phone: l.phone,
-        leadId: l.id,
-        patientId: l.patientId,
-        campaignId: l.campaignId,
-        messages: msgs,
-        unread: l.stage === 'new' ? 1 : l.stage === 'contacted' ? 1 : 0,
-        status: l.stage === 'lost' ? 'closed' : 'open',
-      });
-    });
 
     // Packages sold, gift cards
     for (let i = 0; i < 8; i++) {
@@ -691,7 +663,7 @@ export function buildSeed(): DB {
       ['Birthday offer', 'Patient birthday', 'Happy birthday {first_name}! 🎉 Enjoy 15% off your next visit this month.'],
     ];
     autos.forEach(([name, trigger, message], i) =>
-      db.automations.push({ id: id('au'), tenantId: tid, name, trigger, channel: 'whatsapp', message, enabled: i < 5, sent: int(20, 400) }),
+      db.automations.push({ id: id('au'), tenantId: tid, name, trigger, message, enabled: i < 5, sent: int(20, 400) }),
     );
   }
 
@@ -721,6 +693,6 @@ export function starterCatalog(tenantId: string, vertical: Vertical, ownerName: 
     ['Appointment reminder', '24h before appointment', 'Hi {first_name}, reminder of your {service} tomorrow at {time}. Reply 1 to confirm, 2 to reschedule.'],
     ['Enquiry not booked', 'Lead with no booking after 2h', 'Hi {first_name}, still interested in {interest}? We have slots this week.'],
     ['Post-visit review', '2h after completed visit', 'Thank you for visiting {clinic}! Could you rate your visit? {review_link}'],
-  ].map(([name, trigger, message]) => ({ id: 'au_' + rid(), tenantId, name, trigger, channel: 'whatsapp' as const, message, enabled: true, sent: 0 }));
+  ].map(([name, trigger, message]) => ({ id: 'au_' + rid(), tenantId, name, trigger, message, enabled: true, sent: 0 }));
   return { services, staff, automations };
 }

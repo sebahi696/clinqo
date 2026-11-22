@@ -1,12 +1,12 @@
-import { ChevronLeft, ChevronRight, CreditCard, MessageCircle, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, MessageCircle, Phone, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BookingModal, { type BookingPrefill } from '../../components/BookingModal';
 import { Avatar, Badge, Modal, PageHeader } from '../../components/ui';
 import { fullName, useCan, useLookup, usePatientMap } from '../../lib/hooks';
 import type { AppointmentStatus } from '../../lib/types';
-import { addDays, cx, fmtDay, fmtTime, sameDay, startOfDay, STATUS_LABEL, STATUS_STYLE, usd } from '../../lib/utils';
-import { useDB, useT } from '../../store/db';
+import { addDays, cx, fmtDay, fmtTime, sameDay, startOfDay, STATUS_LABEL, STATUS_STYLE, telLink, usd, waLink } from '../../lib/utils';
+import { useDB, useT, useTenant } from '../../store/db';
 
 const START = 8;
 const END = 20;
@@ -22,8 +22,8 @@ export default function Calendar() {
   const lk = useLookup();
   const can = useCan();
   const nav = useNavigate();
-  const { setAppointmentStatus, sendMessage } = useDB.getState();
-  const convs = useT('conversations');
+  const { setAppointmentStatus } = useDB.getState();
+  const tenant = useTenant()!;
 
   const todays = appts.filter((a) => sameDay(new Date(a.start), day) && a.status !== 'cancelled');
   const sel = appts.find((a) => a.id === selId);
@@ -153,17 +153,17 @@ export default function Calendar() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 border-t border-ink-100 pt-4">
-              <button
+              <a
                 className="btn-secondary"
-                onClick={() => {
-                  const c = convs.find((x) => x.patientId === sel.patientId);
-                  const msg = `Hi ${patients.get(sel.patientId)?.firstName}, reminder of your ${lk.service.get(sel.serviceId)?.name} on ${fmtDay(sel.start)} at ${fmtTime(sel.start)}. Reply 1 to confirm.`;
-                  if (c) sendMessage(c.id, msg, 'bot');
-                  alert('Reminder sent on WhatsApp (simulated).');
-                }}
+                target="_blank"
+                rel="noreferrer"
+                href={waLink(patients.get(sel.patientId)?.phone ?? '', `Hi ${patients.get(sel.patientId)?.firstName}, this is ${tenant.name}. Reminder of your ${lk.service.get(sel.serviceId)?.name} on ${fmtDay(sel.start)} at ${fmtTime(sel.start)}. Please confirm 🙏`)}
               >
-                <MessageCircle size={15} /> Send reminder
-              </button>
+                <MessageCircle size={15} /> WhatsApp reminder
+              </a>
+              <a className="btn-secondary" href={telLink(patients.get(sel.patientId)?.phone ?? '')}>
+                <Phone size={15} /> Call
+              </a>
               {can('pos') && !sel.invoiceId && sel.status !== 'cancelled' && (
                 <button className="btn-primary" onClick={() => nav(`/app/pos?appointment=${sel.id}`)}>
                   <CreditCard size={15} /> Checkout

@@ -16,7 +16,7 @@ export default function AdminMeta() {
     <>
       <PageHeader
         title="Meta ad accounts"
-        subtitle="Clinqo connects one Business Manager and assigns an ad account to each growth tenant."
+        subtitle="Clinqo connects one Business Manager. Each growth tenant gets an ad account; its lead form leads go straight into that tenant's CRM."
         actions={
           meta.connected ? (
             <>
@@ -49,8 +49,9 @@ export default function AdminMeta() {
           </div>
         </div>
         <div className="mt-4 rounded-lg bg-sand-100 p-3 text-xs leading-relaxed text-ink-600">
-          <b>Test build:</b> the connection and insights are simulated so you can test every flow on GitHub Pages. The live build needs a small backend for Facebook Login for Business (OAuth), the
-          Marketing API (ads_read, ads_management, leads_retrieval) and server-side offline conversions with health-safe event names.
+          <b>Test build:</b> the connection and insights are simulated so you can test every flow on GitHub Pages. Your marketer keeps running campaigns in Meta Ads Manager as usual. The live build
+          only needs one Meta app for Clinqo with ads_read (spend and results) and leads_retrieval (lead form leads into each tenant's CRM). No WhatsApp, Instagram or
+          Messenger APIs, and no verification per clinic.
         </div>
       </Card>
 

@@ -1,11 +1,11 @@
 # Clinqo
 
 The operating system for clinics and spas, with the growth team built in.
-Meta ads, WhatsApp/Instagram inbox, CRM, booking, clinical records, POS, packages, inventory and finance, all in one record per patient.
+Meta lead ads straight into the CRM, booking, clinical records, POS, packages, inventory and finance, all in one record per patient.
 
 **Test build:** https://sebahi696.github.io/clinqo/
 
-> This is the **test build** for GitHub Pages. It runs entirely in the browser: data is demo data saved in your browser's localStorage, and Meta / WhatsApp connections are simulated. Use "Reset demo data" on the sign-in page to start over.
+> This is the **test build** for GitHub Pages. It runs entirely in the browser: data is demo data saved in your browser's localStorage, and the Meta connection is simulated. Use "Reset demo data" on the sign-in page to start over.
 
 ## How to test
 
@@ -20,7 +20,7 @@ Demo tenants (Lebanon):
 
 | Tenant | Type | Plan | What it shows |
 | --- | --- | --- | --- |
-| Smile Studio Dental | Dental | Growth suite | Meta ads → WhatsApp → booking → POS, dental chart |
+| Smile Studio Dental | Dental | Growth suite | Meta lead ad → call → booking → POS, dental chart |
 | Lumière Aesthetic Clinic | Aesthetic | Operating system | Client with own agency: no Marketing module |
 | Cedar Wellness Spa | Spa | Growth suite | Packages, memberships, gift cards, couples |
 | Karam Dermatology | Medical | Marketing only | Onboarding: plan waiting for client approval |
@@ -31,15 +31,14 @@ Demo tenants (Lebanon):
 - Platform overview: tenants, MRR, managed ad spend, leads, ROAS per tenant, onboarding pipeline
 - Tenants: create (4-step wizard), edit profile, status, fee, user and branch limits
 - Feature switches per tenant with presets: Growth suite, Operating system, Marketing only, Custom
-- Meta Business Manager connection, ad account list, assign one ad account per tenant, insights sync
+- Meta Business Manager connection, ad account list, assign one ad account (and Facebook page) per tenant, sync of spend and lead-form leads
 - Marketing plan per tenant: goal, budget, target CPL, offers, audiences, phase (plan → configuration → ad spend → optimizing), client approval
 - Tenant users and roles; activity log; open any tenant as admin
 
 **Tenant (clinic / spa)** — each module can be switched off by the super admin
 - Dashboard: today's schedule, revenue, new leads, unread messages, ad performance, stock alerts
 - Marketing: growth plan, ad funnel (spend → leads → booked → attended → paying → revenue), campaigns with CPL, cost per patient, ROAS, monthly report
-- Inbox: WhatsApp / Instagram / Messenger, AI reply suggestion, quick replies, lead stage, create patient, book from chat, simulate an incoming ad lead
-- Leads: drag-and-drop pipeline, speed-to-lead, source and campaign filters, CSV export
+- Leads: Meta lead-form leads arrive with campaign, form and answers; call or WhatsApp in one tap (click-to-chat, no API); drag-and-drop pipeline; time to first contact; add by hand; import a Meta Leads Center CSV or any sheet; export
 - Patients / clients: 360 profile with timeline, appointments, dental chart (FDI), clinical notes, consent forms, packages, invoices; CSV import from Excel or old systems
 - Calendar: day view by provider, week strip, click a slot to book, statuses, deposits, WhatsApp reminder, checkout
 - POS: services, products, packages, gift cards; USD + LBP; Cash USD, Cash LBP, card, Whish, OMT, bank, gift card; split payments; package session redemption; VAT toggle; printable receipt
@@ -47,7 +46,7 @@ Demo tenants (Lebanon):
 - Packages, memberships and gift cards, with unused-session liability
 - Inventory: retail and consumables, lot numbers and expiry, low stock alerts
 - Finance: monthly P&L (revenue, cost of products, commissions, expenses incl. generator and Meta ad spend), cash drawer by currency, expenses, commissions
-- Automations: reminder, no-show, review, recall, birthday flows; recalls due list
+- Follow-ups: tomorrow's reminders, recalls due, no-shows and review requests as lists; one click opens WhatsApp with the template filled in (no messaging API)
 - Reports: revenue by service, provider utilisation, payment mix, lead source conversion
 - Staff, settings (exchange rate, VAT, service catalog), English / العربية (RTL) / Français
 
@@ -81,8 +80,7 @@ src/
 `src/store/db.ts` is the only place that stores data, so it can be swapped for a real API without touching the pages.
 
 1. **Backend + auth:** Postgres (e.g. Supabase) with row-level security on `tenant_id`, real logins per user and role.
-2. **Meta:** Facebook Login for Business, Marketing API (ads_read, ads_management), Lead Ads webhooks (leads_retrieval), and server-side offline conversions with neutral event names. Meta restricts health data, so no treatment names go to Meta.
-3. **WhatsApp:** WhatsApp Cloud API through a Business Solution Provider, approved message templates for reminders and recalls.
-4. **Instagram / Messenger:** Graph API webhooks into the inbox.
-5. **Payments:** local gateway for card links; Whish and OMT references recorded at checkout.
-6. **Hosting** for the live app (GitHub Pages stays as the test build).
+2. **Meta (ads only):** one Meta app for Clinqo with `ads_read` (spend and results per campaign) and `leads_retrieval` (Lead Ads webhook delivers each lead-form submission into the right tenant). The marketer keeps working in Ads Manager. Meta restricts health data, so no treatment names are ever sent back to Meta.
+3. **No messaging APIs:** no WhatsApp, Instagram or Messenger integration and no per-clinic business verification. Staff contact leads by phone or WhatsApp click-to-chat links.
+4. **Payments:** Whish, OMT and card references recorded at checkout.
+5. **Hosting** for the live app (GitHub Pages stays as the test build).

@@ -1,11 +1,11 @@
-import { AlertTriangle, CalendarDays, DollarSign, MessageCircle, UserPlus } from 'lucide-react';
+import { AlertTriangle, CalendarDays, DollarSign, PhoneCall, UserPlus } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Avatar, Badge, Bar, Card, PageHeader, Stat } from '../../components/ui';
 import { fullName, useCan, useLookup, usePatientMap } from '../../lib/hooks';
 import { campaignFunnels, revenueByDay, sumFunnels } from '../../lib/metrics';
-import { fmtTime, pct, sameDay, SOURCE_LABEL, STATUS_LABEL, STATUS_STYLE, usd } from '../../lib/utils';
+import { ago, fmtTime, pct, sameDay, SOURCE_LABEL, STATUS_LABEL, STATUS_STYLE, usd } from '../../lib/utils';
 import type { LeadSource } from '../../lib/types';
 import { useDB, useMe, useT, useTenant } from '../../store/db';
 
@@ -16,7 +16,6 @@ export default function Dashboard() {
   const appts = useT('appointments');
   const invoices = useT('invoices');
   const leads = useT('leads');
-  const convs = useT('conversations');
   const products = useT('products');
   const patients = usePatientMap();
   const lk = useLookup();
@@ -26,7 +25,8 @@ export default function Dashboard() {
   const today = appts.filter((a) => sameDay(new Date(a.start), now) && a.status !== 'cancelled').sort((a, b) => a.start.localeCompare(b.start));
   const revToday = invoices.filter((i) => sameDay(new Date(i.createdAt), now)).reduce((s, i) => s + i.total, 0);
   const newLeads = leads.filter((l) => Date.now() - new Date(l.createdAt).getTime() < 864e5).length;
-  const unread = convs.reduce((s, c) => s + c.unread, 0);
+  const waiting = leads.filter((l) => l.stage === 'new');
+  const oldest = waiting.reduce<string | undefined>((m, l) => (!m || l.createdAt < m ? l.createdAt : m), undefined);
   const series = useMemo(() => revenueByDay(invoices, 30), [invoices]);
   const rev30 = series.reduce((s, d) => s + d.revenue, 0);
   const past30 = appts.filter((a) => new Date(a.start) < now && Date.now() - new Date(a.start).getTime() < 30 * 864e5);
@@ -49,8 +49,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {can('appointments') && <Stat label="Appointments today" value={today.length} hint={`${today.filter((a) => a.status === 'confirmed').length} confirmed`} icon={<CalendarDays size={16} />} />}
         {can('pos') && <Stat label="Revenue today" value={usd(revToday)} hint={`${usd(rev30)} last 30 days`} icon={<DollarSign size={16} />} tone="brand" />}
-        {can('crm') && <Stat label="New leads (24h)" value={newLeads} hint={`${leads.filter((l) => l.stage === 'new').length} waiting for first reply`} icon={<UserPlus size={16} />} />}
-        {can('inbox') && <Stat label="Unread messages" value={unread} hint={<Link to="/app/inbox" className="underline">Open inbox</Link>} icon={<MessageCircle size={16} />} />}
+        {can('crm') && <Stat label="New leads (24h)" value={newLeads} hint={`${leads.filter((l) => l.source === 'meta_ads' && Date.now() - new Date(l.createdAt).getTime() < 864e5).length} from Meta lead ads`} icon={<UserPlus size={16} />} />}
+        {can('crm') && <Stat label="Leads to call now" value={waiting.length} tone={waiting.length ? 'bad' : 'good'} hint={waiting.length ? <Link to="/app/leads" className="underline">Oldest waiting {ago(oldest!)}</Link> : 'All leads contacted'} icon={<PhoneCall size={16} />} />}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">

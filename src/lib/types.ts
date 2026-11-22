@@ -5,7 +5,6 @@
 
 export type ModuleKey =
   | 'marketing' // Meta ads, campaigns, ad ROI (Clinqo-managed growth)
-  | 'inbox' // WhatsApp / Instagram / Messenger unified inbox
   | 'crm' // leads pipeline + patients/clients 360
   | 'appointments' // calendar & booking
   | 'clinical' // charts, notes, consent, dental chart
@@ -14,7 +13,7 @@ export type ModuleKey =
   | 'inventory' // products, stock, lots & expiry
   | 'finance' // expenses, P&L, cash drawer
   | 'staff' // team, commissions
-  | 'automations' // reminders, recall, follow-up flows
+  | 'automations' // reminder, recall & follow-up lists (click-to-send, no messaging API)
   | 'reports'; // analytics
 
 export type Vertical = 'dental' | 'aesthetic' | 'spa' | 'medical';
@@ -41,8 +40,7 @@ export interface Tenant {
   phone: string;
   brandColor: string;
   metaAdAccountId?: string;
-  whatsappNumber?: string;
-  instagramHandle?: string;
+  metaPageName?: string; // Facebook page that runs the lead forms
   monthlyFeeUSD: number;
   createdAt: string;
   limits: { users: number; branches: number };
@@ -143,29 +141,9 @@ export interface Lead {
   patientId?: string;
   ownerId?: string;
   note?: string;
-}
-
-export type Channel = 'whatsapp' | 'instagram' | 'messenger' | 'sms';
-
-export interface Message {
-  id: string;
-  from: 'contact' | 'staff' | 'bot';
-  text: string;
-  at: string;
-}
-
-export interface Conversation {
-  id: string;
-  tenantId: string;
-  channel: Channel;
-  contactName: string;
-  phone: string;
-  leadId?: string;
-  patientId?: string;
-  campaignId?: string;
-  messages: Message[];
-  unread: number;
-  status: 'open' | 'closed';
+  formName?: string; // Meta lead form the lead came from
+  answers?: Record<string, string>; // answers to the lead form questions
+  contactedAt?: string;
 }
 
 export type AppointmentStatus = 'booked' | 'confirmed' | 'arrived' | 'completed' | 'no_show' | 'cancelled';
@@ -309,7 +287,6 @@ export interface Automation {
   tenantId: string;
   name: string;
   trigger: string;
-  channel: Channel;
   message: string;
   enabled: boolean;
   sent: number;

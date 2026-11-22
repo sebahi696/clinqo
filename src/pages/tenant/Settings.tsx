@@ -41,9 +41,6 @@ export default function Settings() {
             <Field label="Address / area">
               <input className="input" value={tenant.city} onChange={(e) => updateTenant(tenant.id, { city: e.target.value })} />
             </Field>
-            <Field label="WhatsApp number">
-              <input className="input" value={tenant.whatsappNumber ?? ''} onChange={(e) => updateTenant(tenant.id, { whatsappNumber: e.target.value })} />
-            </Field>
             <Field label="Interface language">
               <select className="input" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
                 <option value="en">English</option>

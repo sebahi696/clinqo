@@ -8,7 +8,7 @@ import type { PlanKey, Tenant, Vertical } from '../../lib/types';
 import { cx } from '../../lib/utils';
 import { useDB } from '../../store/db';
 
-const STEPS = ['Business', 'Business model & modules', 'Channels', 'Review'];
+const STEPS = ['Business', 'Business model & modules', 'Meta ads', 'Review'];
 const COLORS = ['#1f9880', '#e46a48', '#a855f7', '#d97706', '#0ea5e9', '#be185d'];
 
 export default function TenantNew() {
@@ -136,7 +136,7 @@ export default function TenantNew() {
       )}
 
       {step === 2 && (
-        <Card title="Channels">
+        <Card title="Meta ads">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Meta ad account (from the Clinqo Business Manager)">
               <select className="input" value={f.metaAdAccountId ?? ''} onChange={(e) => set('metaAdAccountId', e.target.value || undefined)} disabled={!f.modules.marketing}>
@@ -149,11 +149,8 @@ export default function TenantNew() {
               </select>
               {!f.modules.marketing && <p className="mt-1 text-xs text-ink-400">Marketing module is off for this tenant.</p>}
             </Field>
-            <Field label="WhatsApp Business number">
-              <input className="input" value={f.whatsappNumber ?? ''} onChange={(e) => set('whatsappNumber', e.target.value)} placeholder="+961 7x xxx xxx" />
-            </Field>
-            <Field label="Instagram handle">
-              <input className="input" value={f.instagramHandle ?? ''} onChange={(e) => set('instagramHandle', e.target.value)} placeholder="@clinic" />
+            <Field label="Facebook page running the lead forms">
+              <input className="input" disabled={!f.modules.marketing} value={f.metaPageName ?? ''} onChange={(e) => set('metaPageName', e.target.value)} placeholder="Page name" />
             </Field>
             <Field label="Status">
               <select className="input" value={f.status} onChange={(e) => set('status', e.target.value as Tenant['status'])}>

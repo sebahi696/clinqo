@@ -11,6 +11,7 @@ import type {
   Appointment,
   Invoice,
   Lang,
+  Lead,
   LeadStage,
   ModuleKey,
   Patient,
@@ -55,7 +56,7 @@ interface Store extends DB {
   // tenant ops
   moveLead: (id: string, stage: LeadStage) => void;
   convertLead: (leadId: string) => string;
-  sendMessage: (convId: string, text: string, from?: 'staff' | 'bot') => void;
+  importLeads: (rows: (Omit<Lead, 'id' | 'tenantId' | 'stage' | 'createdAt'> & { createdAt?: string })[]) => number;
   book: (a: Omit<Appointment, 'id' | 'tenantId'>) => string;
   setAppointmentStatus: (id: string, status: Appointment['status']) => void;
   checkout: (inv: Omit<Invoice, 'id' | 'tenantId' | 'number' | 'createdAt' | 'status'>) => Invoice;
@@ -109,7 +110,7 @@ export const useDB = create<Store>()(
             set({
               plans: [
                 ...get().plans,
-                { tenantId: id, goal: '', monthlyBudget: 300, targetCPL: 6, targetBookings: 20, offers: [], audiences: [], channels: ['Meta Ads (FB + IG)', 'Click-to-WhatsApp'], approvedByClient: false, phase: 'plan', updatedAt: new Date().toISOString() },
+                { tenantId: id, goal: '', monthlyBudget: 300, targetCPL: 6, targetBookings: 20, offers: [], audiences: [], channels: ['Meta lead form ads (Facebook + Instagram)'], approvedByClient: false, phase: 'plan', updatedAt: new Date().toISOString() },
               ],
             });
           get().log(`Created tenant ${t.name} (${PRESETS[t.plan].label})`, id);
@@ -157,10 +158,39 @@ export const useDB = create<Store>()(
               return { ...c, spend: c.spend + s, impressions: c.impressions + s * 110, clicks: c.clicks + Math.round(s * 2.6) };
             }),
           });
-          get().log('Synced Meta ad insights (simulated)');
+          // ...and pulls new lead-form submissions into each tenant's CRM
+          const names = ['Nour Saad', 'Karim Fares', 'Lea Haddad', 'Ali Itani', 'Rita Khoury', 'Tala Aoun', 'Jad Bitar', 'Maya Chamoun'];
+          const fresh: Lead[] = get()
+            .campaigns.filter((c) => c.status === 'ACTIVE')
+            .map((c) => {
+              const svcs = get().services.filter((x) => x.tenantId === c.tenantId);
+              const svc = svcs[Math.floor(Math.random() * svcs.length)];
+              return {
+                id: uid('ld'),
+                tenantId: c.tenantId,
+                name: names[Math.floor(Math.random() * names.length)],
+                phone: `+961 7${Math.floor(Math.random() * 9)} ${Math.floor(100 + Math.random() * 900)} ${Math.floor(100 + Math.random() * 900)}`,
+                source: 'meta_ads' as const,
+                campaignId: c.id,
+                interest: svc?.name ?? '',
+                stage: 'new' as const,
+                value: svc?.price ?? 0,
+                createdAt: new Date().toISOString(),
+                formName: `${c.name} – form`,
+                answers: { 'What are you interested in?': svc?.name ?? '', 'Best time to call?': 'Morning' },
+              };
+            });
+          set({ leads: [...fresh, ...get().leads] });
+          get().log(`Synced Meta ad insights and ${fresh.length} new lead-form leads (simulated)`);
         },
 
-        moveLead: (id, stage) => get().patch('leads', id, { stage }),
+        moveLead: (id, stage) => {
+          const l = get().leads.find((x) => x.id === id);
+          if (l && l.stage === 'new' && stage !== 'new' && l.firstResponseMins === undefined) {
+            const now = new Date();
+            get().patch('leads', id, { stage, contactedAt: now.toISOString(), firstResponseMins: Math.max(1, Math.round((now.getTime() - new Date(l.createdAt).getTime()) / 60000)) });
+          } else get().patch('leads', id, { stage });
+        },
         convertLead: (leadId) => {
           const l = get().leads.find((x) => x.id === leadId)!;
           if (l.patientId) return l.patientId;
@@ -184,15 +214,16 @@ export const useDB = create<Store>()(
             });
           }
           get().patch('leads', leadId, { patientId: pid });
-          set({ conversations: get().conversations.map((c) => (c.leadId === leadId ? { ...c, patientId: pid } : c)) });
           return pid;
         },
-        sendMessage: (convId, text, from = 'staff') =>
-          set({
-            conversations: get().conversations.map((c) =>
-              c.id === convId ? { ...c, unread: 0, messages: [...c.messages, { id: uid('m'), from, text, at: new Date().toISOString() }] } : c,
-            ),
-          }),
+        importLeads: (rows) => {
+          const now = new Date().toISOString();
+          const existing = new Set(get().leads.filter((l) => l.tenantId === tid()).map((l) => l.phone.replace(/\D/g, '')));
+          const fresh = rows.filter((r) => r.phone && !existing.has(r.phone.replace(/\D/g, '')));
+          set({ leads: [...fresh.map((r) => ({ ...r, id: uid('ld'), tenantId: tid(), stage: 'new' as const, createdAt: r.createdAt || now })), ...get().leads] });
+          get().log(`Imported ${fresh.length} leads`, tid());
+          return fresh.length;
+        },
         book: (a) => {
           const id = uid('ap');
           get().insert('appointments', { ...a, id, tenantId: tid() });

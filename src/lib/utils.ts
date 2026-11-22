@@ -1,4 +1,4 @@
-import type { AppointmentStatus, Channel, LeadSource, LeadStage, PaymentMethod } from './types';
+import type { AppointmentStatus, LeadSource, LeadStage, PaymentMethod } from './types';
 
 export const uid = (prefix = '') =>
   prefix + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
@@ -50,7 +50,7 @@ export const addDays = (d: Date, n: number) => {
 export const monthKey = (iso: string) => iso.slice(0, 7);
 
 export const SOURCE_LABEL: Record<LeadSource, string> = {
-  meta_ads: 'Meta Ads',
+  meta_ads: 'Meta lead ad',
   instagram: 'Instagram',
   whatsapp: 'WhatsApp',
   referral: 'Referral',
@@ -100,20 +100,6 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
   package: 'Package session',
 };
 
-export const CHANNEL_LABEL: Record<Channel, string> = {
-  whatsapp: 'WhatsApp',
-  instagram: 'Instagram',
-  messenger: 'Messenger',
-  sms: 'SMS',
-};
-
-export const CHANNEL_COLOR: Record<Channel, string> = {
-  whatsapp: 'bg-emerald-500',
-  instagram: 'bg-gradient-to-br from-fuchsia-500 to-amber-400',
-  messenger: 'bg-blue-500',
-  sms: 'bg-ink-500',
-};
-
 export function download(filename: string, text: string, type = 'text/csv') {
   const blob = new Blob([text], { type });
   const a = document.createElement('a');
@@ -158,3 +144,9 @@ export function parseCSV(text: string): Record<string, string>[] {
     return Object.fromEntries(head.map((h, i) => [h, cells[i] ?? '']));
   });
 }
+
+/** Click-to-chat link: opens WhatsApp with a prefilled message. No API or business verification needed. */
+export const waLink = (phone: string, text = '') => `https://wa.me/${phone.replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+export const telLink = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
+
+export const fillTemplate = (tpl: string, vars: Record<string, string | undefined>) => tpl.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);

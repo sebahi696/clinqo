@@ -9,7 +9,6 @@ import {
   LogOut,
   Megaphone,
   Menu,
-  MessageCircle,
   ReceiptText,
   Settings,
   ShieldCheck,
@@ -35,7 +34,7 @@ export default function TenantLayout() {
   const me = useMe()!;
   const tenant = useTenant()!;
   const session = useDB((s) => s.session);
-  const unread = useDB((s) => s.conversations.filter((c) => c.tenantId === s.session.tenantId).reduce((a, c) => a + c.unread, 0));
+  const fresh = useDB((s) => s.leads.filter((l) => l.tenantId === s.session.tenantId && l.stage === 'new').length);
   const { logout, exitTenant, setLang } = useDB.getState();
   const { t, lang } = useI18n();
   const nav = useNavigate();
@@ -53,8 +52,7 @@ export default function TenantLayout() {
       title: t('g_growth'),
       items: [
         { to: '/app/marketing', key: 'marketing', icon: Megaphone, mod: 'marketing' },
-        { to: '/app/inbox', key: 'inbox', icon: MessageCircle, mod: 'inbox', badge: unread },
-        { to: '/app/leads', key: 'leads', icon: Funnel, mod: 'crm' },
+        { to: '/app/leads', key: 'leads', icon: Funnel, mod: 'crm', badge: fresh },
         { to: '/app/automations', key: 'automations', icon: Workflow, mod: 'automations' },
       ],
     },

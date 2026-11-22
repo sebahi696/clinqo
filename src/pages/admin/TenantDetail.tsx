@@ -58,7 +58,7 @@ export default function TenantDetail() {
         tabs={[
           { key: 'overview', label: 'Overview' },
           { key: 'features', label: 'Features & plan' },
-          { key: 'channels', label: 'Meta & channels' },
+          { key: 'channels', label: 'Meta ads & leads' },
           { key: 'plan', label: 'Marketing plan' },
           { key: 'users', label: 'Users' },
         ]}
@@ -167,7 +167,7 @@ function ChannelsTab({ t }: { t: Tenant }) {
     <div className="space-y-6">
       {!t.modules.marketing && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          The Marketing module is off for this tenant{t.hasOwnAgency ? ' (they work with their own agency)' : ''}. You can still connect WhatsApp and Instagram for the inbox.
+          The Marketing module is off for this tenant{t.hasOwnAgency ? ' (they work with their own agency)' : ''}. Their leads are added by hand or imported from a file.
         </div>
       )}
       <Card title="Meta ad account">
@@ -224,16 +224,17 @@ function ChannelsTab({ t }: { t: Tenant }) {
           </table>
         )}
       </Card>
-      <Card title="Messaging channels">
+      <Card title="Lead delivery">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="WhatsApp Business API number">
-            <input className="input" value={t.whatsappNumber ?? ''} onChange={(e) => updateTenant(t.id, { whatsappNumber: e.target.value })} />
+          <Field label="Facebook page running the lead forms">
+            <input className="input" disabled={!t.modules.marketing} value={t.metaPageName ?? ''} onChange={(e) => updateTenant(t.id, { metaPageName: e.target.value })} placeholder="e.g. Smile Studio Dental Beirut" />
           </Field>
-          <Field label="Instagram account">
-            <input className="input" value={t.instagramHandle ?? ''} onChange={(e) => updateTenant(t.id, { instagramHandle: e.target.value })} />
-          </Field>
+          <div className="text-sm text-ink-600">
+            <span className="label">How leads arrive</span>
+            Lead form ads → Clinqo CRM, tagged with campaign and form answers. The clinic calls or WhatsApps them from the Leads page. Leads from other sources are added by hand or imported.
+          </div>
         </div>
-        <p className="mt-3 text-xs text-ink-400">Test build: messages are simulated. Live build connects through the WhatsApp Cloud API and Instagram Graph API.</p>
+        <p className="mt-3 text-xs text-ink-400">No WhatsApp, Instagram or Messenger API is used. Test build: lead delivery is simulated; the clinic can also import a Meta Leads Center CSV.</p>
       </Card>
     </div>
   );

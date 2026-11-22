@@ -24,7 +24,6 @@ export default function PatientProfile() {
   const pkgs = useT('patientPackages').filter((p) => p.patientId === id);
   const defs = useT('packageDefs');
   const campaigns = useT('campaigns');
-  const conv = useT('conversations').find((c) => c.patientId === id);
   const lk = useLookup();
   const { patch, insert } = useDB.getState();
   const [tab, setTab] = useState<TabKey>('timeline');
@@ -39,9 +38,8 @@ export default function PatientProfile() {
     appts.forEach((a) => items.push({ at: a.start, kind: 'Appointment', text: `${lk.service.get(a.serviceId)?.name} with ${lk.staff.get(a.staffId)?.name}`, sub: STATUS_LABEL[a.status] }));
     invoices.forEach((i) => items.push({ at: i.createdAt, kind: 'Payment', text: `Invoice ${i.number} · ${usd(i.total)}`, sub: i.items.map((x) => x.name).join(', ') }));
     notes.forEach((n) => items.push({ at: n.date, kind: 'Clinical note', text: n.title, sub: n.body }));
-    conv?.messages.slice(-3).forEach((m) => items.push({ at: m.at, kind: 'Message', text: m.text, sub: m.from === 'contact' ? 'Received' : 'Sent' }));
     return items.sort((a, b) => b.at.localeCompare(a.at));
-  }, [patient, appts, invoices, notes, conv, lk, campaigns]);
+  }, [patient, appts, invoices, notes, lk, campaigns]);
 
   if (!patient) return <p className="text-ink-500">Not found.</p>;
   const spent = invoices.reduce((s, i) => s + i.total, 0);

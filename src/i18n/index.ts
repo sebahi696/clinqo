@@ -5,7 +5,6 @@ import type { Lang } from '../lib/types';
 // Lebanon launch: English, Arabic (RTL) and French.
 const dict = {
   dashboard: { en: 'Dashboard', ar: 'لوحة التحكم', fr: 'Tableau de bord' },
-  inbox: { en: 'Inbox', ar: 'الرسائل', fr: 'Messagerie' },
   leads: { en: 'Leads', ar: 'العملاء المحتملون', fr: 'Prospects' },
   patients: { en: 'Patients', ar: 'المرضى', fr: 'Patients' },
   clients: { en: 'Clients', ar: 'العملاء', fr: 'Clients' },
@@ -16,7 +15,7 @@ const dict = {
   inventory: { en: 'Inventory', ar: 'المخزون', fr: 'Stock' },
   finance: { en: 'Finance', ar: 'المالية', fr: 'Finances' },
   marketing: { en: 'Marketing', ar: 'التسويق', fr: 'Marketing' },
-  automations: { en: 'Automations', ar: 'الأتمتة', fr: 'Automatisations' },
+  automations: { en: 'Follow-ups', ar: 'المتابعات', fr: 'Relances' },
   reports: { en: 'Reports', ar: 'التقارير', fr: 'Rapports' },
   staff: { en: 'Staff', ar: 'الفريق', fr: 'Équipe' },
   settings: { en: 'Settings', ar: 'الإعدادات', fr: 'Paramètres' },

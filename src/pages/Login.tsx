@@ -25,7 +25,7 @@ export default function Login() {
           <p className="font-display text-4xl font-semibold leading-[1.1]">
             The operating system for clinics &amp; spas, <span className="text-coral-400">with the growth team built in.</span>
           </p>
-          <p className="mt-5 text-ink-300">Meta ads, WhatsApp inbox, CRM, booking, POS and finance in one record per patient.</p>
+          <p className="mt-5 text-ink-300">Meta lead ads straight into the CRM, booking, POS and finance, in one record per patient.</p>
           <div className="mt-8 flex flex-wrap gap-2 text-xs text-ink-200">
             {['USD + LBP', 'Whish & OMT', 'Arabic · English · Français', 'Multi-tenant'].map((x) => (
               <span key={x} className="rounded-full border border-white/15 px-3 py-1">

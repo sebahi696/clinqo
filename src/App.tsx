@@ -16,7 +16,6 @@ import Automations from './pages/tenant/Automations';
 import Calendar from './pages/tenant/Calendar';
 import Dashboard from './pages/tenant/Dashboard';
 import Finance from './pages/tenant/Finance';
-import Inbox from './pages/tenant/Inbox';
 import Inventory from './pages/tenant/Inventory';
 import Invoices from './pages/tenant/Invoices';
 import Leads from './pages/tenant/Leads';
@@ -72,7 +71,6 @@ export default function App() {
       </Route>
       <Route path="/app" element={me && tenantId ? <TenantLayout /> : <Navigate to={home === '/app' ? '/login' : home} />}>
         <Route index element={<Dashboard />} />
-        <Route path="inbox" element={<Gate mod="inbox"><Inbox /></Gate>} />
         <Route path="leads" element={<Gate mod="crm"><Leads /></Gate>} />
         <Route path="patients" element={<Gate mod="crm"><Patients /></Gate>} />
         <Route path="patients/:id" element={<Gate mod="crm"><PatientProfile /></Gate>} />
