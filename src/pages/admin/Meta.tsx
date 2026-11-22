@@ -9,7 +9,30 @@ export default function AdminMeta() {
   const { meta, tenants, campaigns, connectMeta, disconnectMeta, syncMeta } = useDB();
   const [open, setOpen] = useState(false);
   const [bm, setBm] = useState('Clinqo Agency (Business Manager)');
-  const [acct, setAcct] = useState({ id: '', name: '' });
+  const [addOpen, setAddOpen] = useState(false);
+  const [acct, setAcct] = useState({ id: '', name: '', currency: 'USD', tenantId: '' });
+  const [err, setErr] = useState('');
+  const updateTenant = useDB((s) => s.updateTenant);
+  const log = useDB((s) => s.log);
+  const closeAdd = () => {
+    setAddOpen(false);
+    setErr('');
+    setAcct({ id: '', name: '', currency: 'USD', tenantId: '' });
+  };
+  const addAccount = () => {
+    const digits = acct.id.trim().replace(/^act_/i, '');
+    if (!/^\d{6,20}$/.test(digits)) return setErr('Enter the ad account ID: the number shown in Ads Manager (with or without "act_").');
+    const id = 'act_' + digits;
+    if (meta.adAccounts.some((a) => a.id === id)) return setErr('This ad account is already in the list.');
+    const name = acct.name.trim() || `Ad account ${digits.slice(-4)}`;
+    useDB.setState((s) => ({ meta: { ...s.meta, adAccounts: [...s.meta.adAccounts, { id, name, currency: acct.currency }] } }));
+    log(`Added ad account ${name} (${id})`);
+    if (acct.tenantId) {
+      updateTenant(acct.tenantId, { metaAdAccountId: id });
+      log(`Assigned ad account ${id} to ${tenants.find((t) => t.id === acct.tenantId)?.name}`, acct.tenantId);
+    }
+    closeAdd();
+  };
   const owner = (id: string) => tenants.find((t) => t.metaAdAccountId === id);
 
   return (
@@ -61,21 +84,9 @@ export default function AdminMeta() {
         pad={false}
         actions={
           meta.connected && (
-            <form
-              className="flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!acct.id) return;
-                useDB.setState((s) => ({ meta: { ...s.meta, adAccounts: [...s.meta.adAccounts, { id: acct.id.startsWith('act_') ? acct.id : 'act_' + acct.id, name: acct.name || 'Ad account', currency: 'USD' }] } }));
-                setAcct({ id: '', name: '' });
-              }}
-            >
-              <input className="input w-36 py-1.5 text-xs" placeholder="act_ ID" value={acct.id} onChange={(e) => setAcct({ ...acct, id: e.target.value })} />
-              <input className="input w-36 py-1.5 text-xs" placeholder="Name" value={acct.name} onChange={(e) => setAcct({ ...acct, name: e.target.value })} />
-              <button className="btn-secondary btn-sm">
-                <Plus size={13} /> Add
-              </button>
-            </form>
+            <button className="btn-secondary btn-sm" onClick={() => setAddOpen(true)}>
+              <Plus size={13} /> Add ad account
+            </button>
           )
         }
       >
@@ -117,6 +128,62 @@ export default function AdminMeta() {
           </tbody>
         </table>
       </Card>
+
+      <Modal
+        open={addOpen}
+        onClose={closeAdd}
+        title="Add ad account"
+        footer={
+          <>
+            <button className="btn-secondary" onClick={closeAdd}>
+              Cancel
+            </button>
+            <button className="btn-primary" onClick={addAccount}>
+              Add ad account
+            </button>
+          </>
+        }
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addAccount();
+          }}
+        >
+          <Field label="Ad account ID *">
+            <input className="input" autoFocus placeholder="act_1234567890 or 1234567890" value={acct.id} onChange={(e) => { setAcct({ ...acct, id: e.target.value }); setErr(''); }} />
+          </Field>
+          <Field label="Name">
+            <input className="input" placeholder="e.g. Pearl Dental – Ads" value={acct.name} onChange={(e) => setAcct({ ...acct, name: e.target.value })} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Currency">
+              <select className="input" value={acct.currency} onChange={(e) => setAcct({ ...acct, currency: e.target.value })}>
+                <option>USD</option>
+                <option>EUR</option>
+                <option>AED</option>
+                <option>SAR</option>
+              </select>
+            </Field>
+            <Field label="Assign to tenant (optional)">
+              <select className="input" value={acct.tenantId} onChange={(e) => setAcct({ ...acct, tenantId: e.target.value })}>
+                <option value="">— later —</option>
+                {tenants
+                  .filter((t) => t.modules.marketing && !t.metaAdAccountId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+          </div>
+          {err && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{err}</p>}
+          <p className="text-xs text-ink-400">Find the ID in Meta Ads Manager, in the account dropdown at the top left, or in Business Settings → Ad accounts. Only tenants with Marketing on and no ad account yet are listed.</p>
+          <button type="submit" className="hidden" />
+        </form>
+      </Modal>
 
       <Modal
         open={open}
